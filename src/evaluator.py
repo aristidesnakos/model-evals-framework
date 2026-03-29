@@ -58,12 +58,16 @@ def validate_output(output: str, validation: dict) -> dict:
     }
 
 
-def build_judge_prompt(test_case: dict, model_output: str) -> str:
+def build_judge_prompt(test_case: dict, model_output: str, suite_description: str = "") -> str:
     """Build the scoring prompt for the LLM judge."""
     criteria = test_case["scoring_criteria"]
     reference = test_case.get("reference_answer", "No reference provided.")
 
-    return f"""You are an expert evaluator for construction safety and regulatory compliance content.
+    preamble = "You are an expert evaluator."
+    if suite_description:
+        preamble += f" Context: {suite_description}"
+
+    return f"""{preamble}
 
 Score the following model output against the criteria below. Be strict and specific.
 
@@ -172,9 +176,10 @@ def judge_output(
     judge_model: str,
     test_case: dict,
     model_output: str,
+    suite_description: str = "",
 ) -> dict:
     """Score a model output using an LLM judge."""
-    prompt = build_judge_prompt(test_case, model_output)
+    prompt = build_judge_prompt(test_case, model_output, suite_description)
     result = call_model(client, judge_model, prompt)
 
     if result["error"]:
@@ -203,6 +208,7 @@ def run_evaluation(
     weights = suite["scoring_weights"]
     runs_per_test = suite.get("runs_per_test", 3)
     test_cases = suite["test_cases"]
+    suite_description = suite.get("description", "")
 
     client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
 
@@ -281,6 +287,7 @@ def run_evaluation(
                 for jm in judge_models:
                     judge_result = judge_output(
                         client, jm["id"], tc, result["output"],
+                        suite_description=suite_description,
                     )
                     if judge_result["scores"]:
                         all_judge_scores.append(judge_result["scores"])

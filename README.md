@@ -4,72 +4,73 @@ Automated LLM evaluation pipeline. Discovers new models on OpenRouter, runs stru
 
 Built for practitioners who need to answer: **which model works best for my actual production task?** Real prompts, real scoring, real tradeoffs.
 
+## Quick start
+
+```bash
+# 1. Install
+pip install -r requirements.txt
+
+# 2. Configure
+cp .env.example .env
+# Add your OpenRouter API key: https://openrouter.ai
+
+# 3. Create your evaluation suite
+python evalpulse.py init
+
+# 4. Validate it
+python evalpulse.py --validate --suite your_domain
+
+# 5. Test the pipeline (1 model, 1 test case, low cost)
+python evalpulse.py --dry-run --suite your_domain
+
+# 6. Run the full evaluation
+python evalpulse.py --run-eval --suite your_domain
+
+# 7. View results
+python evalpulse.py --dashboard
+```
+
+Or try the included getting-started suite to verify everything works:
+
+```bash
+python evalpulse.py --dry-run --suite getting_started
+```
+
 ## How it works
 
 ```
-Cron / push / manual trigger
-  -> Check OpenRouter for new models matching tier criteria
-  -> Compare against models.json registry
-  -> Run evaluation suite against enabled models (3 runs per test)
+Create suite (init wizard or JSON)
+  -> Validate suite structure
+  -> Dry-run to verify pipeline
+  -> Run evaluation against all enabled models (3 runs per test)
   -> Validate outputs mechanically before judging
   -> Score with dual LLM judges (cross-provider to reduce bias)
   -> Generate markdown + JSON comparison report
   -> View results in the built-in dashboard
 ```
 
-## Quick start
-
-### 1. Install
+## CLI reference
 
 ```bash
-pip install -r requirements.txt
+# Suite management
+python evalpulse.py init                           # Interactive suite creator
+python evalpulse.py --validate --suite my_suite    # Validate before running
+
+# Evaluation
+python evalpulse.py --dry-run --suite my_suite     # Quick pipeline test
+python evalpulse.py --run-eval --suite my_suite    # Full evaluation
+python evalpulse.py --run-eval --budget 5.00       # With cost limit
+python evalpulse.py --full                         # Check models + evaluate + report
+python evalpulse.py --full --auto-enable-new       # Auto-enable newly found models
+
+# Model discovery
+python evalpulse.py --check-models                 # Check OpenRouter for new models
+
+# Dashboard
+python evalpulse.py --dashboard                    # Start web UI
+python evalpulse.py --dashboard --port 3000        # Custom port
+python evalpulse.py --run-eval --dashboard         # Run then view
 ```
-
-### 2. Configure
-
-```bash
-cp .env.example .env
-# Add your OpenRouter API key: https://openrouter.ai
-```
-
-### 3. Run
-
-```bash
-cd src
-
-# Full pipeline: check models + evaluate + report
-python main.py --full
-
-# Just check for new models
-python main.py --check-models
-
-# Just run evaluation
-python main.py --run-eval
-
-# Auto-enable newly detected models
-python main.py --full --auto-enable-new
-
-# Use a specific evaluation suite
-python main.py --run-eval --suite your_domain
-
-# Set a budget limit (USD)
-python main.py --run-eval --budget 5.00
-```
-
-### 4. View results
-
-```bash
-# Start the dashboard
-python main.py --dashboard
-
-# Custom port
-python main.py --dashboard --port 3000
-
-# Run eval then immediately open dashboard
-python main.py --run-eval --dashboard
-```
-
-The dashboard runs locally at `http://127.0.0.1:8080` and auto-opens your browser.
 
 ## Dashboard
 
@@ -86,65 +87,51 @@ No external services required. Zero dependencies beyond Python stdlib.
 ## Project structure
 
 ```
+├── evalpulse.py             # Run from project root
 ├── models.json              # Model registry (auto-updated)
 ├── evals/
-│   └── suite.json           # Evaluation test cases and scoring criteria
+│   ├── getting_started.json # Domain-neutral starter suite
+│   └── suite.json           # Example: regulatory compliance suite
 ├── src/
 │   ├── main.py              # CLI orchestrator
-│   ├── model_checker.py     # OpenRouter model discovery + tier filtering
+│   ├── init_wizard.py       # Interactive suite creator
+│   ├── suite_validator.py   # Pre-flight suite validation
 │   ├── evaluator.py         # Eval runner with dual-judge scoring
+│   ├── model_checker.py     # OpenRouter model discovery + tier filtering
 │   ├── reporter.py          # Markdown + JSON report generation
 │   └── dashboard.py         # Built-in web dashboard (stdlib only)
-├── reports/                 # Generated reports (auto-committed)
+├── reports/                 # Generated reports
 ├── .github/workflows/
 │   └── eval.yml             # GitHub Actions automation
 ├── requirements.txt
 └── .env.example
 ```
 
-## Model selection
+## Creating evaluation suites
 
-Models are filtered by tier criteria defined in `models.json`:
+### Interactive wizard
 
-- Context window >= 128K tokens
-- Input cost < $1.00 / million tokens
-- Output cost < $5.00 / million tokens
-- Not free-tier
+The fastest way to create a suite:
 
-New models are automatically discovered via `--check-models` and added to the registry when they match the criteria.
+```bash
+python evalpulse.py init
+```
 
-## Evaluation suite
+The wizard asks you for:
+- Domain name and description
+- Test cases: name, category, prompt, validation rules, reference answer
+- Number of runs per test
 
-The default suite (`evals/suite.json`) evaluates models on regulatory compliance document generation. Each output goes through two stages:
+It generates a valid JSON file in `evals/` and validates it automatically.
 
-**1. Mechanical validation** (before judging)
-- Required terms present
-- Minimum length met
-- Minimum structured items (hazards, gaps, steps)
-- Outputs that fail validation score 0 — no judge call wasted
+### Manual JSON
 
-**2. Dual-judge scoring** (cross-provider)
-- Primary judge: Claude Sonnet 4.6
-- Secondary judge: GPT-5.4
-- Scores averaged across judges to reduce single-provider bias
-- Each test repeated 3 times for statistical reliability
-
-Scoring dimensions (configurable per suite):
-- **Completeness** (30%) — coverage of required content
-- **Accuracy** (30%) — factual and reasoning correctness
-- **Format** (15%) — structural match to expected output
-- **Domain relevance** (15%) — specificity vs generic content
-- **Clarity** (10%) — actionable for a non-expert
-
-### Creating your own evaluation suite
-
-EvalPulse is designed to be reused across projects. The default suite evaluates construction safety documents, but you can create suites for any domain — customer support, legal analysis, code generation, medical Q&A, etc.
-
-**Step 1:** Create a new JSON file in `evals/` (e.g., `evals/customer_support.json`):
+Create a JSON file in `evals/`:
 
 ```json
 {
   "suite_name": "customer_support",
+  "description": "Evaluates models on customer support response quality",
   "runs_per_test": 3,
   "scoring_weights": {
     "completeness": 0.30,
@@ -166,53 +153,61 @@ EvalPulse is designed to be reused across projects. The default suite evaluates 
       },
       "reference_answer": "Description of what a good answer covers",
       "scoring_criteria": {
+        "completeness": "What 'complete' means for your use case",
         "accuracy": "What 'accurate' means for your domain",
-        "completeness": "What 'complete' means for your use case"
+        "format": "Expected output structure",
+        "domain_relevance": "What domain-specific knowledge is needed",
+        "clarity": "What 'clear' means for your audience"
       }
     }
   ]
 }
 ```
 
-**Step 2:** Run the evaluation:
+### Tips for writing good test cases
 
-```bash
-python main.py --run-eval --suite customer_support
-```
-
-**Step 3:** View the results:
-
-```bash
-python main.py --dashboard
-```
-
-**Tips for writing good test cases:**
 - Use your actual production prompts, not synthetic ones
 - Include edge cases that have caused issues in production
 - Set `must_contain` to terms that a correct answer absolutely requires
 - Set `min_length` based on what a useful response looks like for your use case
-- Write `scoring_criteria` descriptions that are specific to your domain — the judges use these to calibrate their scores
-- You can adjust `scoring_weights` to emphasize what matters most (e.g., raise accuracy weight for medical/legal domains)
-- Multiple suites can coexist in `evals/` — run different suites for different use cases
+- Write `scoring_criteria` descriptions specific to your domain — the judges use these to calibrate scores
+- Adjust `scoring_weights` to emphasize what matters most (e.g., raise accuracy for medical/legal)
+- Add a `description` field to your suite — it's used in the judge prompt for domain context
+- Multiple suites can coexist in `evals/` for different use cases
 
-### Customizing model tiers
+## Evaluation pipeline
 
-Edit `models.json` to change the tier filtering criteria:
+Each output goes through two stages:
 
-```json
-{
-  "metadata": {
-    "tier_criteria": {
-      "min_context_length": 128000,
-      "max_input_cost_per_million": 1.00,
-      "max_output_cost_per_million": 5.00,
-      "exclude_free": true
-    }
-  }
-}
-```
+**1. Mechanical validation** (before judging)
+- Required terms present
+- Minimum length met
+- Minimum structured items
+- Outputs that fail validation score 0 — no judge call wasted
 
-Raise the cost limits to include more powerful models, or lower them to focus on the cheapest options. Run `--check-models` after changing criteria to discover matching models.
+**2. Dual-judge scoring** (cross-provider)
+- Primary judge: Claude Sonnet 4.6
+- Secondary judge: GPT-5.4
+- Scores averaged across judges to reduce single-provider bias
+- Each test repeated across configurable number of runs
+
+Scoring dimensions (configurable per suite):
+- **Completeness** (30%) — coverage of required content
+- **Accuracy** (30%) — factual and reasoning correctness
+- **Format** (15%) — structural match to expected output
+- **Domain relevance** (15%) — specificity vs generic content
+- **Clarity** (10%) — actionable for a non-expert
+
+## Model selection
+
+Models are filtered by tier criteria defined in `models.json`:
+
+- Context window >= 128K tokens
+- Input cost < $1.00 / million tokens
+- Output cost < $5.00 / million tokens
+- Not free-tier
+
+New models are automatically discovered via `--check-models` and added to the registry when they match the criteria. Edit `models.json` to change tier thresholds.
 
 ## Automation (GitHub Actions)
 
@@ -226,14 +221,6 @@ Add this secret to your GitHub repository:
 - `OPENROUTER_API_KEY`
 
 Reports are auto-committed to `reports/`.
-
-## Reports
-
-Generated reports include:
-- **Summary table** — all models ranked by weighted score
-- **Per-test-case breakdown** — dimension scores per model per test
-- **Reliability analysis** — standard deviation across runs
-- **Raw JSON** — structured results for programmatic analysis
 
 ## License
 

@@ -1,0 +1,71 @@
+{
+  "suite_name": "getting_started",
+  "description": "Domain-neutral evaluation suite for verifying the EvalPulse pipeline. Tests summarization, structured output, and reasoning capabilities.",
+  "runs_per_test": 1,
+  "scoring_weights": {
+    "completeness": 0.30,
+    "accuracy": 0.30,
+    "format": 0.15,
+    "domain_relevance": 0.15,
+    "clarity": 0.10
+  },
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "Text summarization",
+      "category": "summarization",
+      "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment — a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+      "expected_format": "text",
+      "validation": {
+        "must_contain": ["evaluation"],
+        "min_length": 100
+      },
+      "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+      "scoring_criteria": {
+        "completeness": "All three key ideas from the passage are represented",
+        "accuracy": "Bullet points accurately reflect the source material without fabrication",
+        "format": "Exactly 3 bullet points, clearly formatted",
+        "domain_relevance": "Content relates to LLM evaluation specifically, not generic AI",
+        "clarity": "Each bullet is concise and self-contained"
+      }
+    },
+    {
+      "id": "tc_002",
+      "name": "Structured list generation",
+      "category": "structured_output",
+      "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+      "expected_format": "text",
+      "validation": {
+        "must_contain": ["cost", "latency"],
+        "min_length": 300
+      },
+      "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+      "scoring_criteria": {
+        "completeness": "Exactly 5 considerations listed, each with an explanation",
+        "accuracy": "Considerations are genuinely important for production LLM selection",
+        "format": "Numbered list (1-5) with clear structure",
+        "domain_relevance": "Specific to LLM/AI deployment, not generic software concerns",
+        "clarity": "Explanations are practical and actionable"
+      }
+    },
+    {
+      "id": "tc_003",
+      "name": "Compare and contrast reasoning",
+      "category": "reasoning",
+      "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+      "expected_format": "text",
+      "validation": {
+        "must_contain": ["rule", "machine learning"],
+        "min_length": 400
+      },
+      "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+      "scoring_criteria": {
+        "completeness": "All 5 requested sections are present with substantive content",
+        "accuracy": "Technical claims about both approaches are correct",
+        "format": "5 clearly labeled sections, 2-3 sentences each",
+        "domain_relevance": "Specific to content moderation, not generic ML vs rules",
+        "clarity": "A non-technical reader could understand the tradeoffs"
+      }
+    }
+  ]
+}
