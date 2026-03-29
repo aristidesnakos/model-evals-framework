@@ -1,0 +1,479 @@
+"""
+EvalPulse Dashboard — local web UI for browsing evaluation results.
+
+Uses only Python stdlib. Serves a single-page app that reads JSON
+reports from the reports/ directory via a small REST API.
+"""
+
+import json
+import re
+import webbrowser
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+
+
+def start_dashboard(port: int, reports_dir: Path):
+    """Start the dashboard server and open the browser."""
+    reports_dir.mkdir(exist_ok=True)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/":
+                self._serve_html()
+            elif self.path == "/api/reports":
+                self._serve_report_list()
+            elif self.path.startswith("/api/reports/"):
+                filename = self.path[len("/api/reports/"):]
+                self._serve_report(filename)
+            else:
+                self._respond(404, {"error": "Not found"})
+
+        def _serve_html(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(DASHBOARD_HTML.encode())
+
+        def _serve_report_list(self):
+            reports = []
+            for f in sorted(reports_dir.glob("*.json"), reverse=True):
+                try:
+                    data = json.loads(f.read_text())
+                    model_scores = []
+                    for r in data.get("results", []):
+                        scores = [tr["avg_score"] for tr in r.get("test_results", []) if tr["avg_score"] > 0]
+                        if scores:
+                            model_scores.append({"name": r["model_name"], "avg": round(sum(scores) / len(scores), 1)})
+                    model_scores.sort(key=lambda x: x["avg"], reverse=True)
+                    reports.append({
+                        "filename": f.name,
+                        "run_id": data.get("run_id", ""),
+                        "suite_name": data.get("suite_name", ""),
+                        "model_count": len(data.get("results", [])),
+                        "top_model": model_scores[0] if model_scores else None,
+                        "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else [0, 0],
+                    })
+                except (json.JSONDecodeError, KeyError):
+                    continue
+            self._respond(200, reports)
+
+        def _serve_report(self, filename: str):
+            safe = re.sub(r"[^a-zA-Z0-9_\-.]", "", filename)
+            if not safe.endswith(".json"):
+                safe += ".json"
+            path = reports_dir / safe
+            if not path.exists():
+                self._respond(404, {"error": f"Report not found: {safe}"})
+                return
+            try:
+                data = json.loads(path.read_text())
+                self._respond(200, data)
+            except json.JSONDecodeError:
+                self._respond(500, {"error": "Invalid JSON in report file"})
+
+        def _respond(self, status: int, data):
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps(data, default=str).encode())
+
+        def log_message(self, format, *args):
+            pass  # Suppress request logging
+
+    server = HTTPServer(("127.0.0.1", port), Handler)
+    url = f"http://127.0.0.1:{port}"
+    print(f"EvalPulse Dashboard running at {url}")
+    print("Press Ctrl+C to stop.\n")
+    webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nDashboard stopped.")
+        server.server_close()
+
+
+DASHBOARD_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EvalPulse Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f1f5f9; --surface: #ffffff; --text: #1e293b; --muted: #64748b;
+  --border: #e2e8f0; --accent: #3b82f6; --accent-light: #eff6ff;
+  --green: #22c55e; --amber: #f59e0b; --red: #ef4444;
+  --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+header h1 { font-size: 18px; font-weight: 700; }
+header nav { display: flex; gap: 8px; margin-left: auto; }
+header nav a, header nav button { padding: 6px 14px; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); transition: all 0.15s; }
+header nav a:hover, header nav button:hover { color: var(--accent); border-color: var(--accent); }
+header nav a.active { color: var(--accent); background: var(--accent-light); border-color: var(--accent); }
+#app { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--muted); }
+.card-subtitle { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.scoring-key { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 8px 12px; background: var(--bg); border-radius: 6px; margin-bottom: 12px; }
+.scoring-key .key-item { display: flex; align-items: center; gap: 4px; }
+.scoring-key .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.scoring-key .dot-green { background: var(--green); }
+.scoring-key .dot-amber { background: var(--amber); }
+.scoring-key .dot-red { background: var(--red); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none; white-space: nowrap; }
+th:hover { color: var(--accent); }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--accent-light); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.badge-suite { background: #ede9fe; color: #7c3aed; }
+.badge-cat { background: #e0f2fe; color: #0284c7; }
+.score { font-weight: 600; font-variant-numeric: tabular-nums; }
+.score-high { color: var(--green); }
+.score-mid { color: var(--amber); }
+.score-low { color: var(--red); }
+.meta { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; font-size: 13px; color: var(--muted); }
+.meta span { display: flex; align-items: center; gap: 4px; }
+.meta strong { color: var(--text); }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-container { position: relative; height: 300px; }
+details { margin-bottom: 8px; }
+details summary { padding: 10px; cursor: pointer; border-radius: var(--radius); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+details summary:hover { background: var(--accent-light); }
+details[open] summary { border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.heatmap-cell { padding: 6px 10px; text-align: center; font-weight: 600; font-size: 12px; border-radius: 4px; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+.btn-compare { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; opacity: 0.5; pointer-events: none; }
+.btn-compare.enabled { opacity: 1; pointer-events: auto; }
+.btn-compare.enabled:hover { background: #2563eb; }
+input[type=checkbox] { accent-color: var(--accent); }
+.delta-up { color: var(--green); }
+.delta-down { color: var(--red); }
+.delta-flat { color: var(--muted); }
+@media (max-width: 768px) { .chart-row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>EvalPulse</h1>
+  <nav>
+    <a href="#/" class="nav-link active" data-route="index">Runs</a>
+    <button class="btn-compare" id="compareBtn" onclick="goCompare()">Compare Selected</button>
+  </nav>
+</header>
+<div id="app"></div>
+
+<script>
+const cache = {};
+const selected = new Set();
+
+async function fetchList() {
+  if (cache._list) return cache._list;
+  const r = await fetch('/api/reports');
+  cache._list = await r.json();
+  return cache._list;
+}
+
+async function fetchReport(filename) {
+  if (cache[filename]) return cache[filename];
+  const r = await fetch('/api/reports/' + filename);
+  cache[filename] = await r.json();
+  return cache[filename];
+}
+
+function scoreClass(v) { return v >= 7 ? 'score-high' : v >= 5 ? 'score-mid' : 'score-low'; }
+function fmtDate(runId) {
+  if (!runId || runId.length < 15) return runId || '';
+  return runId.slice(0,4)+'-'+runId.slice(4,6)+'-'+runId.slice(6,8)+' '+runId.slice(9,11)+':'+runId.slice(11,13)+' UTC';
+}
+function stdColor(v) { return v < 0.5 ? 'var(--green)' : v < 1.0 ? 'var(--amber)' : 'var(--red)'; }
+
+const COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+
+function updateNav(route) {
+  document.querySelectorAll('.nav-link').forEach(a => {
+    a.classList.toggle('active', a.dataset.route === route);
+  });
+}
+
+function updateCompareBtn() {
+  const btn = document.getElementById('compareBtn');
+  btn.classList.toggle('enabled', selected.size >= 2);
+  btn.textContent = selected.size >= 2 ? `Compare (${selected.size})` : 'Compare Selected';
+}
+
+function goCompare() {
+  if (selected.size < 2) return;
+  location.hash = '#/compare?' + [...selected].map(f => 'id=' + f).join('&');
+}
+
+function modelSummaries(data) {
+  return data.results.map(mr => {
+    const scores = mr.test_results.filter(t => t.avg_score > 0).map(t => t.avg_score);
+    const lats = []; let tokens = 0;
+    mr.test_results.forEach(tr => tr.runs.forEach(r => {
+      if (r.latency) lats.push(r.latency);
+      tokens += (r.tokens?.input||0) + (r.tokens?.output||0);
+    }));
+    const stds = mr.test_results.filter(t => t.std_dev > 0).map(t => t.std_dev);
+    return {
+      id: mr.model_id, name: mr.model_name,
+      avg: scores.length ? +(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 0,
+      min: scores.length ? Math.min(...scores) : 0,
+      max: scores.length ? Math.max(...scores) : 0,
+      std: stds.length ? +(stds.reduce((a,b)=>a+b,0)/stds.length).toFixed(2) : 0,
+      lat: lats.length ? +(lats.reduce((a,b)=>a+b,0)/lats.length).toFixed(1) : 0,
+      tokens, errors: mr.errors
+    };
+  }).sort((a,b) => b.avg - a.avg);
+}
+
+// --- RENDERERS ---
+
+async function renderIndex() {
+  updateNav('index');
+  const app = document.getElementById('app');
+  const reports = await fetchList();
+
+  if (!reports.length) {
+    app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>cd src && python main.py --run-eval</code></p></div>';
+    return;
+  }
+
+  let rows = reports.map(r => `
+    <tr>
+      <td><input type="checkbox" data-file="${r.filename}" onchange="toggleSelect(this)" ${selected.has(r.filename)?'checked':''}></td>
+      <td><a href="#/run/${r.filename}" style="color:var(--accent);text-decoration:none;font-weight:500">${fmtDate(r.run_id)}</a></td>
+      <td><span class="badge badge-suite">${r.suite_name}</span></td>
+      <td>${r.model_count}</td>
+      <td>${r.top_model ? `<span class="score ${scoreClass(r.top_model.avg)}">${r.top_model.avg}/10</span> ${r.top_model.name}` : '-'}</td>
+      <td>${r.score_range[0]}/10 - ${r.score_range[1]}/10</td>
+    </tr>
+  `).join('');
+
+  app.innerHTML = `<div class="card"><h2>Evaluation Runs</h2>
+    <p class="card-subtitle">Scores are weighted averages on a 1-10 scale (10 = best). Each model is scored by dual LLM judges across multiple runs.</p>
+    <table><thead><tr><th width="30"></th><th>Date</th><th>Suite</th><th>Models</th><th>Top Score (out of 10)</th><th>Score Range</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function toggleSelect(cb) {
+  if (cb.checked) selected.add(cb.dataset.file); else selected.delete(cb.dataset.file);
+  updateCompareBtn();
+}
+
+async function renderRun(filename) {
+  updateNav('');
+  const app = document.getElementById('app');
+  const data = await fetchReport(filename);
+  if (data.error) { app.innerHTML = `<div class="card"><p>${data.error}</p></div>`; return; }
+
+  const summaries = modelSummaries(data);
+
+  // Meta
+  let html = `<div class="card"><div class="meta">
+    <span><strong>Suite:</strong> <span class="badge badge-suite">${data.suite_name}</span></span>
+    <span><strong>Date:</strong> ${fmtDate(data.run_id)}</span>
+    <span><strong>Runs/test:</strong> ${data.runs_per_test}</span>
+    <span><strong>Judges:</strong> ${(data.judge_models||[]).join(', ')}</span>
+  </div></div>`;
+
+  // Scoring key
+  html += `<div class="card">
+    <div class="scoring-key">
+      <span style="font-weight:600">Score scale: 1-10 (10 = best)</span>
+      <span class="key-item"><span class="dot dot-green"></span> 7-10 Strong</span>
+      <span class="key-item"><span class="dot dot-amber"></span> 5-6.9 Moderate</span>
+      <span class="key-item"><span class="dot dot-red"></span> &lt;5 Weak</span>
+      <span class="key-item" style="margin-left:auto">Std Dev: lower = more consistent across runs</span>
+    </div>
+  </div>`;
+
+  // Leaderboard table
+  html += `<div class="card"><h2>Model Leaderboard</h2>
+    <p class="card-subtitle">Weighted average score across all test cases, scored 1-10 by dual LLM judges</p>
+    <div class="chart-container" style="height:${Math.max(200, summaries.length*50)}px"><canvas id="leaderboard"></canvas></div>
+    <table><thead><tr><th>#</th><th>Model</th><th>Avg Score (/10)</th><th>Min (/10)</th><th>Max (/10)</th><th>Std Dev</th><th>Avg Latency</th><th>Total Tokens</th><th>Errors</th></tr></thead><tbody>`;
+  summaries.forEach((m, i) => {
+    html += `<tr><td>${i+1}</td><td>${m.name}</td>
+      <td class="score ${scoreClass(m.avg)}">${m.avg}/10</td>
+      <td>${m.min}/10</td><td>${m.max}/10</td>
+      <td style="color:${stdColor(m.std)}">${m.std}</td>
+      <td>${m.lat}s</td><td>${m.tokens.toLocaleString()}</td><td>${m.errors}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // Charts row: radar
+  html += `<div class="chart-row">
+    <div class="card"><h2>Dimension Profiles</h2><p class="card-subtitle">Average score per dimension (1-10 scale). Each axis shows how a model performs on that quality.</p><div class="chart-container"><canvas id="radar"></canvas></div></div>
+    <div class="card"><h2>Reliability (Std Dev)</h2><p class="card-subtitle">Standard deviation across repeated runs. Lower bars = more consistent output quality.</p><div class="chart-container"><canvas id="reliability"></canvas></div></div>
+  </div>`;
+
+  // Per-test-case
+  html += '<div class="card"><h2>Per-Test-Case Results</h2>';
+  if (data.results.length > 0) {
+    const testCases = data.results[0].test_results;
+    testCases.forEach(tc => {
+      let tcRows = [];
+      data.results.forEach(mr => {
+        const match = mr.test_results.find(t => t.test_case_id === tc.test_case_id);
+        if (!match) return;
+        const dims = {completeness:0,accuracy:0,format:0,domain_relevance:0,clarity:0};
+        const valid = match.runs.filter(r => r.scores);
+        if (valid.length) {
+          for (const d in dims) { dims[d] = +(valid.map(r=>r.scores[d]||0).reduce((a,b)=>a+b,0)/valid.length).toFixed(1); }
+        }
+        tcRows.push({name:mr.model_name, avg:match.avg_score, std:match.std_dev, ...dims});
+      });
+      tcRows.sort((a,b) => b.avg - a.avg);
+      html += `<details><summary><span><span class="badge badge-cat">${tc.category}</span> ${tc.test_case_name}</span><span class="score ${scoreClass(tcRows[0]?.avg||0)}">${tcRows[0]?.avg||0}/10</span></summary>
+        <table><thead><tr><th>Model</th><th>Avg (/10)</th><th>Std Dev</th><th>Completeness (/10)</th><th>Accuracy (/10)</th><th>Format (/10)</th><th>Domain (/10)</th><th>Clarity (/10)</th></tr></thead><tbody>`;
+      tcRows.forEach(r => {
+        html += `<tr><td>${r.name}</td><td class="score ${scoreClass(r.avg)}">${r.avg}/10</td><td style="color:${stdColor(r.std)}">${r.std}</td>
+          <td>${r.completeness}/10</td><td>${r.accuracy}/10</td><td>${r.format}/10</td><td>${r.domain_relevance}/10</td><td>${r.clarity}/10</td></tr>`;
+      });
+      html += '</tbody></table></details>';
+    });
+  }
+  html += '</div>';
+
+  app.innerHTML = html;
+
+  // Render charts
+  if (summaries.length > 0) {
+    new Chart(document.getElementById('leaderboard'), {
+      type: 'bar', options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: { x: { min: 0, max: 10, title: { display: true, text: 'Weighted Score (1-10)', font: { size: 12 }, color: '#64748b' }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw + '/10' } } } },
+      data: { labels: summaries.map(m=>m.name),
+        datasets: [{ data: summaries.map(m=>m.avg),
+          backgroundColor: summaries.map(m => m.avg>=7?'#22c55e':m.avg>=5?'#f59e0b':'#ef4444'),
+          borderRadius: 4, barThickness: 28 }] }
+    });
+
+    const dims = ['completeness','accuracy','format','domain_relevance','clarity'];
+    const radarDS = data.results.map((mr, i) => {
+      const vals = dims.map(d => {
+        const valid = mr.test_results.flatMap(t=>t.runs).filter(r=>r.scores);
+        return valid.length ? +(valid.map(r=>r.scores[d]||0).reduce((a,b)=>a+b,0)/valid.length).toFixed(1) : 0;
+      });
+      return { label: mr.model_name, data: vals, borderColor: COLORS[i%COLORS.length],
+        backgroundColor: COLORS[i%COLORS.length]+'22', pointRadius: 3, borderWidth: 2 };
+    });
+    new Chart(document.getElementById('radar'), {
+      type: 'radar', data: { labels: dims.map(d=>d.replace('_',' ')), datasets: radarDS },
+      options: { responsive: true, maintainAspectRatio: false,
+        scales: { r: { min: 0, max: 10, ticks: { stepSize: 2 }, pointLabels: { font: { size: 11 } } } },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '/10' } } } }
+    });
+
+    // Reliability chart: std dev per model
+    new Chart(document.getElementById('reliability'), {
+      type: 'bar', data: { labels: summaries.map(m=>m.name),
+        datasets: [{ label: 'Avg Std Dev', data: summaries.map(m=>m.std),
+          backgroundColor: summaries.map(m => m.std<0.5?'#22c55e':m.std<1?'#f59e0b':'#ef4444'),
+          borderRadius: 4, barThickness: 28 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        scales: { y: { min: 0, title: { display: true, text: 'Standard Deviation (lower = more consistent)', font: { size: 11 }, color: '#64748b' }, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } },
+        plugins: { legend: { display: false } } }
+    });
+  }
+}
+
+async function renderCompare() {
+  updateNav('');
+  const app = document.getElementById('app');
+  const params = new URLSearchParams(location.hash.split('?')[1] || '');
+  const ids = params.getAll('id');
+
+  if (ids.length < 2) {
+    app.innerHTML = '<div class="card"><p>Select at least 2 runs to compare.</p></div>';
+    return;
+  }
+
+  const runs = await Promise.all(ids.map(id => fetchReport(id)));
+  const validRuns = runs.filter(r => !r.error);
+
+  if (validRuns.length < 2) {
+    app.innerHTML = '<div class="card"><p>Could not load enough reports for comparison.</p></div>';
+    return;
+  }
+
+  // Collect all model IDs across runs
+  const allModels = new Map();
+  validRuns.forEach((run, ri) => {
+    run.results.forEach(mr => {
+      if (!allModels.has(mr.model_id)) allModels.set(mr.model_id, { name: mr.model_name, scores: [] });
+      const entry = allModels.get(mr.model_id);
+      const scores = mr.test_results.filter(t=>t.avg_score>0).map(t=>t.avg_score);
+      entry.scores[ri] = scores.length ? +(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 0;
+    });
+  });
+
+  let html = `<div class="card"><h2>Run Comparison</h2>
+    <p class="card-subtitle">Side-by-side weighted scores (1-10 scale) across evaluation runs</p>
+    <div class="meta">${validRuns.map((r,i) => `<span><strong>Run ${i+1}:</strong> ${fmtDate(r.run_id)} (${r.suite_name})</span>`).join('')}</div>
+    <div class="chart-container" style="height:${Math.max(250, allModels.size*60)}px"><canvas id="compare-chart"></canvas></div></div>`;
+
+  // Delta table
+  html += '<div class="card"><h2>Score Changes</h2><p class="card-subtitle">Change in weighted average score (out of 10) between runs</p><table><thead><tr><th>Model</th>';
+  validRuns.forEach((r,i) => { html += `<th>Run ${i+1} (/10)</th>`; });
+  html += '<th>Delta</th></tr></thead><tbody>';
+
+  allModels.forEach((info, modelId) => {
+    const first = info.scores[0] ?? 0;
+    const last = info.scores[info.scores.length - 1] ?? 0;
+    const delta = +(last - first).toFixed(1);
+    const cls = delta > 0.1 ? 'delta-up' : delta < -0.1 ? 'delta-down' : 'delta-flat';
+    const arrow = delta > 0.1 ? '&#9650;' : delta < -0.1 ? '&#9660;' : '&#9644;';
+    html += `<tr><td>${info.name}</td>`;
+    info.scores.forEach((s, i) => { html += `<td class="score ${scoreClass(s||0)}">${s ? s+'/10' : '-'}</td>`; });
+    html += `<td class="${cls}">${arrow} ${delta > 0 ? '+' : ''}${delta}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  app.innerHTML = html;
+
+  // Grouped bar chart
+  const labels = [...allModels.keys()].map(id => allModels.get(id).name);
+  const datasets = validRuns.map((run, i) => ({
+    label: `Run ${i+1}: ${fmtDate(run.run_id).split(' ')[0]}`,
+    data: [...allModels.keys()].map(id => allModels.get(id).scores[i] ?? 0),
+    backgroundColor: COLORS[i % COLORS.length] + 'cc',
+    borderRadius: 4, barThickness: 20,
+  }));
+
+  new Chart(document.getElementById('compare-chart'), {
+    type: 'bar', data: { labels, datasets },
+    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: { x: { min: 0, max: 10, title: { display: true, text: 'Weighted Score (1-10)', font: { size: 12 }, color: '#64748b' }, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } },
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + '/10' } } } }
+  });
+}
+
+// --- ROUTER ---
+function route() {
+  const hash = location.hash || '#/';
+  if (hash.startsWith('#/run/')) {
+    renderRun(hash.slice(6));
+  } else if (hash.startsWith('#/compare')) {
+    renderCompare();
+  } else {
+    renderIndex();
+  }
+}
+
+window.addEventListener('hashchange', route);
+window.addEventListener('load', route);
+</script>
+</body>
+</html>
+"""

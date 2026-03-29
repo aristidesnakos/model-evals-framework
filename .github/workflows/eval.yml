@@ -1,0 +1,89 @@
+name: EvalPulse
+
+on:
+  schedule:
+    # Weekly: Monday 6am UTC
+    - cron: "0 6 * * 1"
+
+  push:
+    paths:
+      - "models.json"
+      - "evals/**"
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - full
+          - check-models
+          - run-eval
+      auto_enable:
+        description: "Auto-enable new models"
+        required: false
+        default: false
+        type: boolean
+      suite:
+        description: "Evaluation suite name"
+        required: false
+        default: "suite"
+      budget:
+        description: "Max budget in USD (empty for no limit)"
+        required: false
+        default: ""
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run EvalPulse
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd src
+
+          MODE="${{ github.event.inputs.mode || 'full' }}"
+          AUTO_ENABLE="${{ github.event.inputs.auto_enable }}"
+          SUITE="${{ github.event.inputs.suite || 'suite' }}"
+          BUDGET="${{ github.event.inputs.budget }}"
+
+          CMD="python main.py --${MODE} --suite ${SUITE}"
+
+          if [ "${AUTO_ENABLE}" = "true" ]; then
+            CMD="${CMD} --auto-enable-new"
+          fi
+
+          if [ -n "${BUDGET}" ]; then
+            CMD="${CMD} --budget ${BUDGET}"
+          fi
+
+          echo "Running: ${CMD}"
+          ${CMD}
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add models.json reports/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "eval: $(date -u +%Y-%m-%d) run results"
+            git push
+          fi
