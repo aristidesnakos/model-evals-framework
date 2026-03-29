@@ -1,0 +1,111 @@
+{
+  "suite_name": "regulatory_compliance",
+  "description": "Evaluates models on regulatory compliance document generation for construction safety",
+  "runs_per_test": 3,
+  "scoring_weights": {
+    "completeness": 0.30,
+    "accuracy": 0.30,
+    "format": 0.15,
+    "domain_relevance": 0.15,
+    "clarity": 0.10
+  },
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "Hazard identification with risk ratings",
+      "category": "structured_reasoning",
+      "prompt": "You are a construction safety consultant. Identify all hazards associated with working at heights on a commercial building project (3+ stories). For each hazard, provide:\n1. Hazard description\n2. Risk rating (High/Medium/Low) with justification\n3. Control measures in hierarchy of controls order (elimination, substitution, engineering, administrative, PPE)\n4. Residual risk after controls\n\nFormat your response as a structured table.",
+      "expected_format": "table",
+      "validation": {
+        "must_contain": ["elimination", "substitution", "engineering", "administrative", "PPE"],
+        "min_hazards": 5,
+        "min_length": 500
+      },
+      "reference_answer": "Must identify: falls from edges, falling objects, scaffold collapse, ladder hazards, unstable surfaces, weather effects. Each hazard must have all 5 hierarchy of control levels addressed. Risk ratings must reflect that working at heights is inherently high-risk per AS/NZS 1576 and Safe Work Australia codes of practice.",
+      "scoring_criteria": {
+        "completeness": "Covers at least 5 distinct hazards with all required fields (description, rating, controls, residual risk)",
+        "accuracy": "Risk ratings are appropriate — working at heights hazards should generally be High before controls. Control hierarchy is correctly ordered.",
+        "format": "Structured table format with clear columns and rows. Easy to scan.",
+        "domain_relevance": "References specific regulations, standards, or codes of practice (e.g., AS/NZS 1576, WHS Act). Not generic safety advice.",
+        "clarity": "A site supervisor with no safety background could use this to brief workers."
+      }
+    },
+    {
+      "id": "tc_002",
+      "name": "Safe Work Method Statement generation",
+      "category": "document_generation",
+      "prompt": "Generate a Safe Work Method Statement (SWMS) for concrete pouring on a residential construction site. The SWMS must include:\n- Project details section (leave as placeholders)\n- High-risk work activities covered\n- Step-by-step work procedure\n- Hazards and risks for each step\n- Control measures for each hazard\n- PPE requirements\n- Emergency procedures\n- Sign-off section\n\nFollow the format required under the Australian WHS Regulations for high-risk construction work.",
+      "expected_format": "document",
+      "validation": {
+        "must_contain": ["SWMS", "high-risk", "PPE", "emergency", "hazard"],
+        "min_length": 1000
+      },
+      "reference_answer": "Must follow WHS Regulation requirements: identify the high-risk construction work (concrete work involves manual handling, working near plant/equipment, potential for falls). Must have sequential steps from site preparation through finishing and cleanup. Each step must have associated hazards and specific controls. Must include concrete-specific hazards: chemical burns from wet concrete, manual handling of forms, pump line pressure, silica dust.",
+      "scoring_criteria": {
+        "completeness": "All 8 required sections are present and substantive. Work procedure has at least 8 sequential steps.",
+        "accuracy": "Hazards are specific to concrete work (not generic). Controls match the specific hazards identified. Complies with WHS Regulation structure.",
+        "format": "Professional document format suitable for printing and posting on site. Clear section headings, numbered steps.",
+        "domain_relevance": "References WHS Regulations, specific concrete hazards (alkaline burns, silica), and Australian construction standards.",
+        "clarity": "Workers and supervisors can follow the procedure without additional guidance."
+      }
+    },
+    {
+      "id": "tc_003",
+      "name": "Regulatory interpretation — nuanced yes/no",
+      "category": "regulatory_interpretation",
+      "prompt": "A construction company asks: 'Do we need a licensed scaffolder to erect scaffolding on our residential renovation project? The scaffold is a prefabricated modular system, 4 meters high, and workers will use it for exterior painting.'\n\nProvide a definitive answer with legal reasoning under Australian WHS law. Cite specific regulations.",
+      "expected_format": "text",
+      "validation": {
+        "must_contain": ["scaffold", "license", "WHS"],
+        "min_length": 200
+      },
+      "reference_answer": "Under Australian WHS Regulations, scaffolding work over 4 meters requires a High Risk Work Licence (HRWL) — specifically a scaffolding licence (basic, intermediate, or advanced depending on type). At exactly 4 meters, the answer depends on the jurisdiction and whether 'over 4 meters' is interpreted as strictly greater than. Prefabricated modular systems may have different requirements than tube-and-coupler. The answer should acknowledge this nuance rather than giving an unqualified yes/no.",
+      "scoring_criteria": {
+        "completeness": "Addresses the licence question, the height threshold, the type of scaffold, and the specific use case.",
+        "accuracy": "Correctly identifies the 4-meter HRWL threshold. Acknowledges the 'at exactly 4m' nuance. Doesn't conflate scaffold types.",
+        "format": "Clear answer upfront followed by legal reasoning. Not buried in paragraphs.",
+        "domain_relevance": "Cites WHS Regulations, HRWL requirements, and relevant Safe Work Australia guidance.",
+        "clarity": "The company gets an actionable answer — what they need to do next."
+      }
+    },
+    {
+      "id": "tc_004",
+      "name": "Compliance gap analysis",
+      "category": "multi_step_reasoning",
+      "prompt": "A small construction company (15 employees) provides the following information about their safety management system:\n- They have a generic WHS policy downloaded from the internet\n- Toolbox talks happen 'when there's time'\n- Incident reports are kept in a spreadsheet\n- No formal risk assessments have been done for 2 years\n- Workers have PPE but no training records\n- They have never done a site safety audit\n\nConduct a compliance gap analysis against Australian WHS Regulations. For each gap:\n1. Identify the specific regulatory requirement being breached\n2. Rate the severity (Critical/Major/Minor)\n3. Recommend a corrective action with timeline\n4. Note potential penalties for non-compliance",
+      "expected_format": "structured",
+      "validation": {
+        "must_contain": ["gap", "WHS", "corrective", "penalty"],
+        "min_gaps": 5,
+        "min_length": 800
+      },
+      "reference_answer": "Critical gaps: no current risk assessments (WHS Reg Part 3.1 — must be reviewed regularly), no training records (WHS Act s19 duty to provide information/training/instruction). Major gaps: generic policy (must be specific to workplace per WHS Act s34), ad-hoc toolbox talks (consultation requirements under WHS Act Part 5), no safety audits (due diligence obligation under WHS Act s27). Minor: spreadsheet incident tracking (not inherently non-compliant but inadequate for notifiable incidents under WHS Act s38). Penalties should reference current maximum penalties under WHS Act.",
+      "scoring_criteria": {
+        "completeness": "Identifies at least 5 distinct gaps covering policy, risk assessment, training, consultation, and auditing.",
+        "accuracy": "Each gap maps to a real WHS requirement with correct regulation reference. Severity ratings reflect actual enforcement priorities.",
+        "format": "Structured format with clear gap identification, severity, action, and timeline for each item.",
+        "domain_relevance": "References specific WHS Act sections and regulations. Penalty amounts are realistic.",
+        "clarity": "A business owner without legal expertise can understand what needs fixing and why it's urgent."
+      }
+    },
+    {
+      "id": "tc_005",
+      "name": "Edge case — unusual scenario",
+      "category": "edge_case",
+      "prompt": "A construction site is located adjacent to a school. During demolition work, asbestos-containing material (ACM) is unexpectedly discovered in a wall cavity. The school is currently in session. There are 6 workers on site, none with asbestos removal licenses.\n\nWhat are the immediate legal obligations? Walk through the exact steps the site supervisor must take, in order, citing specific regulations. Include notification requirements and timelines.",
+      "expected_format": "numbered_steps",
+      "validation": {
+        "must_contain": ["asbestos", "stop work", "notify", "licensed"],
+        "min_length": 500
+      },
+      "reference_answer": "Immediate: stop all work in the area (WHS Reg 477). Do not disturb the ACM further. Evacuate workers from the immediate area. Notify the PCBU (principal contractor). Contact a licensed asbestos assessor to identify and assess the ACM. Notify the regulator (state WHS authority) as this is a notifiable incident if there has been exposure. Notify the school — duty to ensure health/safety of others at or near the workplace (WHS Act s19). Only a licensed asbestos removalist (Class A for friable, Class B for non-friable) can remove the ACM (WHS Reg 485-490). An asbestos removal control plan must be prepared before any removal. Air monitoring required during removal near an occupied building.",
+      "scoring_criteria": {
+        "completeness": "Covers: stop work, assessment, notification (regulator + school), licensed removal, control plan, air monitoring, and return-to-work criteria.",
+        "accuracy": "Correct regulation references. Distinguishes Class A vs Class B removal. Identifies notification as potentially required under notifiable incident provisions.",
+        "format": "Clear numbered steps in chronological order. Easy to follow in an emergency.",
+        "domain_relevance": "References specific WHS Regulations (Part 8.1-8.8 Asbestos), relevant Codes of Practice, and notification timelines.",
+        "clarity": "A site supervisor finding asbestos right now could follow these steps immediately."
+      }
+    }
+  ]
+}
