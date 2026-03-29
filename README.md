@@ -136,13 +136,15 @@ Scoring dimensions (configurable per suite):
 - **Domain relevance** (15%) — specificity vs generic content
 - **Clarity** (10%) — actionable for a non-expert
 
-### Custom suites
+### Creating your own evaluation suite
 
-Create a new JSON file in `evals/`:
+EvalPulse is designed to be reused across projects. The default suite evaluates construction safety documents, but you can create suites for any domain — customer support, legal analysis, code generation, medical Q&A, etc.
+
+**Step 1:** Create a new JSON file in `evals/` (e.g., `evals/customer_support.json`):
 
 ```json
 {
-  "suite_name": "your_domain",
+  "suite_name": "customer_support",
   "runs_per_test": 3,
   "scoring_weights": {
     "completeness": 0.30,
@@ -156,13 +158,13 @@ Create a new JSON file in `evals/`:
       "id": "tc_001",
       "name": "your_test",
       "category": "reasoning",
-      "prompt": "Your production prompt here",
-      "expected_format": "json",
+      "prompt": "Your actual production prompt here",
+      "expected_format": "text",
       "validation": {
         "must_contain": ["required_term"],
-        "min_length": 500
+        "min_length": 200
       },
-      "reference_answer": "What a good answer should cover",
+      "reference_answer": "Description of what a good answer covers",
       "scoring_criteria": {
         "accuracy": "What 'accurate' means for your domain",
         "completeness": "What 'complete' means for your use case"
@@ -172,7 +174,45 @@ Create a new JSON file in `evals/`:
 }
 ```
 
-Run with: `python main.py --run-eval --suite your_domain`
+**Step 2:** Run the evaluation:
+
+```bash
+python main.py --run-eval --suite customer_support
+```
+
+**Step 3:** View the results:
+
+```bash
+python main.py --dashboard
+```
+
+**Tips for writing good test cases:**
+- Use your actual production prompts, not synthetic ones
+- Include edge cases that have caused issues in production
+- Set `must_contain` to terms that a correct answer absolutely requires
+- Set `min_length` based on what a useful response looks like for your use case
+- Write `scoring_criteria` descriptions that are specific to your domain — the judges use these to calibrate their scores
+- You can adjust `scoring_weights` to emphasize what matters most (e.g., raise accuracy weight for medical/legal domains)
+- Multiple suites can coexist in `evals/` — run different suites for different use cases
+
+### Customizing model tiers
+
+Edit `models.json` to change the tier filtering criteria:
+
+```json
+{
+  "metadata": {
+    "tier_criteria": {
+      "min_context_length": 128000,
+      "max_input_cost_per_million": 1.00,
+      "max_output_cost_per_million": 5.00,
+      "exclude_free": true
+    }
+  }
+}
+```
+
+Raise the cost limits to include more powerful models, or lower them to focus on the cheapest options. Run `--check-models` after changing criteria to discover matching models.
 
 ## Automation (GitHub Actions)
 
