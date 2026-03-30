@@ -247,6 +247,12 @@ async function renderIndex() {
     return;
   }
 
+  // Auto-open the first run so visitors see charts immediately
+  if (reports.length === 1 && location.hash === '#/') {
+    location.hash = '#/run/' + reports[0].filename;
+    return;
+  }
+
   const uniqueSuites = new Set(reports.map(r => r.suite_name)).size;
   const totalModelEvals = reports.reduce((s, r) => s + r.model_count, 0);
 
