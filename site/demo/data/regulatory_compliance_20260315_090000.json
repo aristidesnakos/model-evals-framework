@@ -1,0 +1,2273 @@
+{
+  "run_id": "20260315_090000",
+  "suite_name": "regulatory_compliance",
+  "runs_per_test": 3,
+  "judge_models": [
+    "anthropic/claude-sonnet-4.6",
+    "openai/gpt-5.4"
+  ],
+  "results": [
+    {
+      "model_id": "openai/gpt-5.4-mini",
+      "model_name": "GPT-5.4 Mini",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.17,
+              "tokens": {
+                "input": 565,
+                "output": 549
+              },
+              "scores": {
+                "completeness": 7.1,
+                "accuracy": 6.5,
+                "format": 8.2,
+                "domain_relevance": 7.5,
+                "clarity": 8.3
+              },
+              "weighted_score": 7.26,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.63,
+              "tokens": {
+                "input": 620,
+                "output": 526
+              },
+              "scores": {
+                "completeness": 7.8,
+                "accuracy": 8.8,
+                "format": 7.5,
+                "domain_relevance": 6.8,
+                "clarity": 8.6
+              },
+              "weighted_score": 7.99,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.54,
+              "tokens": {
+                "input": 376,
+                "output": 363
+              },
+              "scores": {
+                "completeness": 8.5,
+                "accuracy": 7.2,
+                "format": 5.9,
+                "domain_relevance": 9.2,
+                "clarity": 8.0
+              },
+              "weighted_score": 7.78,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.68,
+          "std_dev": 0.31,
+          "min_score": 7.26,
+          "max_score": 7.99
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.15,
+              "tokens": {
+                "input": 700,
+                "output": 599
+              },
+              "scores": {
+                "completeness": 7.0,
+                "accuracy": 8.6,
+                "format": 7.9,
+                "domain_relevance": 6.7,
+                "clarity": 6.3
+              },
+              "weighted_score": 7.5,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.65,
+              "tokens": {
+                "input": 576,
+                "output": 311
+              },
+              "scores": {
+                "completeness": 7.9,
+                "accuracy": 7.7,
+                "format": 7.9,
+                "domain_relevance": 6.5,
+                "clarity": 9.4
+              },
+              "weighted_score": 7.78,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.61,
+              "tokens": {
+                "input": 413,
+                "output": 229
+              },
+              "scores": {
+                "completeness": 8.2,
+                "accuracy": 7.0,
+                "format": 7.2,
+                "domain_relevance": 8.6,
+                "clarity": 8.2
+              },
+              "weighted_score": 7.75,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.68,
+          "std_dev": 0.13,
+          "min_score": 7.5,
+          "max_score": 7.78
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.35,
+              "tokens": {
+                "input": 535,
+                "output": 275
+              },
+              "scores": {
+                "completeness": 6.4,
+                "accuracy": 9.1,
+                "format": 9.4,
+                "domain_relevance": 7.2,
+                "clarity": 6.7
+              },
+              "weighted_score": 7.81,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.31,
+              "tokens": {
+                "input": 442,
+                "output": 199
+              },
+              "scores": {
+                "completeness": 8.2,
+                "accuracy": 6.6,
+                "format": 7.1,
+                "domain_relevance": 7.5,
+                "clarity": 7.7
+              },
+              "weighted_score": 7.4,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.3,
+              "tokens": {
+                "input": 695,
+                "output": 544
+              },
+              "scores": {
+                "completeness": 9.2,
+                "accuracy": 7.3,
+                "format": 7.3,
+                "domain_relevance": 8.0,
+                "clarity": 9.0
+              },
+              "weighted_score": 8.14,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.78,
+          "std_dev": 0.3,
+          "min_score": 7.4,
+          "max_score": 8.14
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.12,
+              "tokens": {
+                "input": 623,
+                "output": 245
+              },
+              "scores": {
+                "completeness": 6.7,
+                "accuracy": 8.0,
+                "format": 8.0,
+                "domain_relevance": 7.0,
+                "clarity": 9.3
+              },
+              "weighted_score": 7.59,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.73,
+              "tokens": {
+                "input": 575,
+                "output": 279
+              },
+              "scores": {
+                "completeness": 8.7,
+                "accuracy": 8.8,
+                "format": 8.3,
+                "domain_relevance": 7.2,
+                "clarity": 8.5
+              },
+              "weighted_score": 8.43,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.7,
+              "tokens": {
+                "input": 468,
+                "output": 389
+              },
+              "scores": {
+                "completeness": 7.7,
+                "accuracy": 7.4,
+                "format": 8.7,
+                "domain_relevance": 6.9,
+                "clarity": 6.9
+              },
+              "weighted_score": 7.56,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.86,
+          "std_dev": 0.4,
+          "min_score": 7.56,
+          "max_score": 8.43
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.11,
+              "tokens": {
+                "input": 577,
+                "output": 285
+              },
+              "scores": {
+                "completeness": 8.6,
+                "accuracy": 7.0,
+                "format": 7.3,
+                "domain_relevance": 7.3,
+                "clarity": 8.1
+              },
+              "weighted_score": 7.68,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.8,
+              "tokens": {
+                "input": 507,
+                "output": 218
+              },
+              "scores": {
+                "completeness": 7.3,
+                "accuracy": 7.5,
+                "format": 8.3,
+                "domain_relevance": 8.8,
+                "clarity": 7.3
+              },
+              "weighted_score": 7.74,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.14,
+              "tokens": {
+                "input": 554,
+                "output": 584
+              },
+              "scores": {
+                "completeness": 8.4,
+                "accuracy": 7.3,
+                "format": 8.3,
+                "domain_relevance": 7.8,
+                "clarity": 9.0
+              },
+              "weighted_score": 8.03,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.82,
+          "std_dev": 0.15,
+          "min_score": 7.68,
+          "max_score": 8.03
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "google/gemini-3.1-flash-lite-preview",
+      "model_name": "Gemini 3.1 Flash Lite",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.4,
+              "tokens": {
+                "input": 490,
+                "output": 417
+              },
+              "scores": {
+                "completeness": 6.2,
+                "accuracy": 5.7,
+                "format": 7.4,
+                "domain_relevance": 7.7,
+                "clarity": 8.2
+              },
+              "weighted_score": 6.66,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.84,
+              "tokens": {
+                "input": 472,
+                "output": 415
+              },
+              "scores": {
+                "completeness": 7.8,
+                "accuracy": 7.2,
+                "format": 8.5,
+                "domain_relevance": 8.8,
+                "clarity": 6.8
+              },
+              "weighted_score": 7.78,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.44,
+              "tokens": {
+                "input": 419,
+                "output": 481
+              },
+              "scores": {
+                "completeness": 6.9,
+                "accuracy": 7.7,
+                "format": 7.2,
+                "domain_relevance": 7.5,
+                "clarity": 5.6
+              },
+              "weighted_score": 7.14,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.19,
+          "std_dev": 0.46,
+          "min_score": 6.66,
+          "max_score": 7.78
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.2,
+              "tokens": {
+                "input": 598,
+                "output": 267
+              },
+              "scores": {
+                "completeness": 8.4,
+                "accuracy": 5.9,
+                "format": 7.2,
+                "domain_relevance": 7.8,
+                "clarity": 7.8
+              },
+              "weighted_score": 7.32,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.96,
+              "tokens": {
+                "input": 414,
+                "output": 250
+              },
+              "scores": {
+                "completeness": 6.7,
+                "accuracy": 6.3,
+                "format": 7.7,
+                "domain_relevance": 7.2,
+                "clarity": 7.5
+              },
+              "weighted_score": 6.88,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.69,
+              "tokens": {
+                "input": 377,
+                "output": 355
+              },
+              "scores": {
+                "completeness": 5.7,
+                "accuracy": 8.1,
+                "format": 6.6,
+                "domain_relevance": 8.0,
+                "clarity": 8.1
+              },
+              "weighted_score": 7.14,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.11,
+          "std_dev": 0.18,
+          "min_score": 6.88,
+          "max_score": 7.32
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.14,
+              "tokens": {
+                "input": 470,
+                "output": 470
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 6.9,
+                "format": 6.3,
+                "domain_relevance": 7.7,
+                "clarity": 6.8
+              },
+              "weighted_score": 7.28,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.75,
+              "tokens": {
+                "input": 553,
+                "output": 190
+              },
+              "scores": {
+                "completeness": 7.3,
+                "accuracy": 7.9,
+                "format": 8.5,
+                "domain_relevance": 8.5,
+                "clarity": 6.6
+              },
+              "weighted_score": 7.77,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.54,
+              "tokens": {
+                "input": 512,
+                "output": 351
+              },
+              "scores": {
+                "completeness": 6.3,
+                "accuracy": 8.9,
+                "format": 7.9,
+                "domain_relevance": 6.0,
+                "clarity": 5.8
+              },
+              "weighted_score": 7.22,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.42,
+          "std_dev": 0.25,
+          "min_score": 7.22,
+          "max_score": 7.77
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.96,
+              "tokens": {
+                "input": 564,
+                "output": 442
+              },
+              "scores": {
+                "completeness": 8.0,
+                "accuracy": 8.5,
+                "format": 6.2,
+                "domain_relevance": 6.3,
+                "clarity": 8.4
+              },
+              "weighted_score": 7.67,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.62,
+              "tokens": {
+                "input": 453,
+                "output": 247
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 6.1,
+                "format": 5.6,
+                "domain_relevance": 6.8,
+                "clarity": 5.5
+              },
+              "weighted_score": 6.67,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.6,
+              "tokens": {
+                "input": 578,
+                "output": 217
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 7.1,
+                "format": 6.5,
+                "domain_relevance": 6.5,
+                "clarity": 7.6
+              },
+              "weighted_score": 7.27,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.2,
+          "std_dev": 0.41,
+          "min_score": 6.67,
+          "max_score": 7.67
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 0.92,
+              "tokens": {
+                "input": 663,
+                "output": 283
+              },
+              "scores": {
+                "completeness": 5.9,
+                "accuracy": 7.0,
+                "format": 7.4,
+                "domain_relevance": 6.4,
+                "clarity": 7.4
+              },
+              "weighted_score": 6.68,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.32,
+              "tokens": {
+                "input": 389,
+                "output": 300
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 7.5,
+                "format": 6.4,
+                "domain_relevance": 6.2,
+                "clarity": 8.5
+              },
+              "weighted_score": 7.42,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.61,
+              "tokens": {
+                "input": 369,
+                "output": 403
+              },
+              "scores": {
+                "completeness": 6.1,
+                "accuracy": 7.7,
+                "format": 7.1,
+                "domain_relevance": 6.7,
+                "clarity": 6.8
+              },
+              "weighted_score": 6.89,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.0,
+          "std_dev": 0.31,
+          "min_score": 6.68,
+          "max_score": 7.42
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "qwen/qwen3.5-plus-02-15",
+      "model_name": "Qwen 3.5 Plus",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 0.97,
+              "tokens": {
+                "input": 526,
+                "output": 379
+              },
+              "scores": {
+                "completeness": 5.8,
+                "accuracy": 5.8,
+                "format": 7.1,
+                "domain_relevance": 6.7,
+                "clarity": 7.0
+              },
+              "weighted_score": 6.25,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.75,
+              "tokens": {
+                "input": 512,
+                "output": 372
+              },
+              "scores": {
+                "completeness": 6.1,
+                "accuracy": 6.6,
+                "format": 8.3,
+                "domain_relevance": 6.7,
+                "clarity": 8.3
+              },
+              "weighted_score": 6.89,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.7,
+              "tokens": {
+                "input": 391,
+                "output": 534
+              },
+              "scores": {
+                "completeness": 6.3,
+                "accuracy": 5.7,
+                "format": 6.4,
+                "domain_relevance": 7.1,
+                "clarity": 7.8
+              },
+              "weighted_score": 6.4,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.51,
+          "std_dev": 0.27,
+          "min_score": 6.25,
+          "max_score": 6.89
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.3,
+              "tokens": {
+                "input": 382,
+                "output": 197
+              },
+              "scores": {
+                "completeness": 8.7,
+                "accuracy": 7.4,
+                "format": 7.1,
+                "domain_relevance": 7.7,
+                "clarity": 6.6
+              },
+              "weighted_score": 7.71,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.85,
+              "tokens": {
+                "input": 546,
+                "output": 242
+              },
+              "scores": {
+                "completeness": 6.4,
+                "accuracy": 6.6,
+                "format": 7.5,
+                "domain_relevance": 7.2,
+                "clarity": 6.2
+              },
+              "weighted_score": 6.72,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.31,
+              "tokens": {
+                "input": 404,
+                "output": 326
+              },
+              "scores": {
+                "completeness": 7.9,
+                "accuracy": 8.6,
+                "format": 7.9,
+                "domain_relevance": 8.5,
+                "clarity": 9.0
+              },
+              "weighted_score": 8.31,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.58,
+          "std_dev": 0.66,
+          "min_score": 6.72,
+          "max_score": 8.31
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.02,
+              "tokens": {
+                "input": 559,
+                "output": 278
+              },
+              "scores": {
+                "completeness": 6.8,
+                "accuracy": 7.5,
+                "format": 8.0,
+                "domain_relevance": 7.9,
+                "clarity": 5.6
+              },
+              "weighted_score": 7.24,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.26,
+              "tokens": {
+                "input": 496,
+                "output": 273
+              },
+              "scores": {
+                "completeness": 7.3,
+                "accuracy": 7.2,
+                "format": 6.1,
+                "domain_relevance": 6.7,
+                "clarity": 6.7
+              },
+              "weighted_score": 6.94,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.46,
+              "tokens": {
+                "input": 619,
+                "output": 335
+              },
+              "scores": {
+                "completeness": 8.7,
+                "accuracy": 8.5,
+                "format": 7.6,
+                "domain_relevance": 8.7,
+                "clarity": 6.7
+              },
+              "weighted_score": 8.28,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.49,
+          "std_dev": 0.57,
+          "min_score": 6.94,
+          "max_score": 8.28
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.51,
+              "tokens": {
+                "input": 461,
+                "output": 574
+              },
+              "scores": {
+                "completeness": 7.1,
+                "accuracy": 6.1,
+                "format": 6.5,
+                "domain_relevance": 8.1,
+                "clarity": 7.5
+              },
+              "weighted_score": 6.9,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.74,
+              "tokens": {
+                "input": 614,
+                "output": 216
+              },
+              "scores": {
+                "completeness": 7.7,
+                "accuracy": 6.4,
+                "format": 6.2,
+                "domain_relevance": 6.5,
+                "clarity": 8.0
+              },
+              "weighted_score": 6.93,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 0.94,
+              "tokens": {
+                "input": 352,
+                "output": 279
+              },
+              "scores": {
+                "completeness": 6.5,
+                "accuracy": 5.8,
+                "format": 8.3,
+                "domain_relevance": 7.2,
+                "clarity": 7.1
+              },
+              "weighted_score": 6.72,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.85,
+          "std_dev": 0.09,
+          "min_score": 6.72,
+          "max_score": 6.93
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.57,
+              "tokens": {
+                "input": 515,
+                "output": 192
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 6.3,
+                "format": 6.1,
+                "domain_relevance": 7.2,
+                "clarity": 7.6
+              },
+              "weighted_score": 7.07,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.85,
+              "tokens": {
+                "input": 633,
+                "output": 524
+              },
+              "scores": {
+                "completeness": 8.5,
+                "accuracy": 7.1,
+                "format": 7.7,
+                "domain_relevance": 7.5,
+                "clarity": 6.2
+              },
+              "weighted_score": 7.58,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.3,
+              "tokens": {
+                "input": 623,
+                "output": 337
+              },
+              "scores": {
+                "completeness": 9.0,
+                "accuracy": 8.5,
+                "format": 7.9,
+                "domain_relevance": 8.9,
+                "clarity": 7.8
+              },
+              "weighted_score": 8.55,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.73,
+          "std_dev": 0.61,
+          "min_score": 7.07,
+          "max_score": 8.55
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "mistralai/mistral-small-2603",
+      "model_name": "Mistral Small 4",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.65,
+              "tokens": {
+                "input": 401,
+                "output": 552
+              },
+              "scores": {
+                "completeness": 5.7,
+                "accuracy": 6.2,
+                "format": 5.7,
+                "domain_relevance": 8.4,
+                "clarity": 7.7
+              },
+              "weighted_score": 6.46,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.81,
+              "tokens": {
+                "input": 653,
+                "output": 508
+              },
+              "scores": {
+                "completeness": 6.7,
+                "accuracy": 8.1,
+                "format": 6.9,
+                "domain_relevance": 7.4,
+                "clarity": 6.8
+              },
+              "weighted_score": 7.26,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.5,
+              "tokens": {
+                "input": 653,
+                "output": 243
+              },
+              "scores": {
+                "completeness": 7.9,
+                "accuracy": 5.5,
+                "format": 7.5,
+                "domain_relevance": 5.9,
+                "clarity": 5.4
+              },
+              "weighted_score": 6.57,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.76,
+          "std_dev": 0.35,
+          "min_score": 6.46,
+          "max_score": 7.26
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.11,
+              "tokens": {
+                "input": 363,
+                "output": 460
+              },
+              "scores": {
+                "completeness": 7.8,
+                "accuracy": 8.3,
+                "format": 7.8,
+                "domain_relevance": 8.5,
+                "clarity": 6.6
+              },
+              "weighted_score": 7.93,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.17,
+              "tokens": {
+                "input": 594,
+                "output": 513
+              },
+              "scores": {
+                "completeness": 6.8,
+                "accuracy": 6.3,
+                "format": 5.7,
+                "domain_relevance": 7.3,
+                "clarity": 7.9
+              },
+              "weighted_score": 6.67,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.66,
+              "tokens": {
+                "input": 531,
+                "output": 577
+              },
+              "scores": {
+                "completeness": 6.1,
+                "accuracy": 6.2,
+                "format": 5.6,
+                "domain_relevance": 8.3,
+                "clarity": 6.8
+              },
+              "weighted_score": 6.46,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.02,
+          "std_dev": 0.65,
+          "min_score": 6.46,
+          "max_score": 7.93
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.9,
+              "tokens": {
+                "input": 460,
+                "output": 552
+              },
+              "scores": {
+                "completeness": 8.2,
+                "accuracy": 6.0,
+                "format": 8.1,
+                "domain_relevance": 7.0,
+                "clarity": 7.8
+              },
+              "weighted_score": 7.3,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.06,
+              "tokens": {
+                "input": 366,
+                "output": 334
+              },
+              "scores": {
+                "completeness": 5.4,
+                "accuracy": 8.4,
+                "format": 8.6,
+                "domain_relevance": 8.3,
+                "clarity": 6.5
+              },
+              "weighted_score": 7.33,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.81,
+              "tokens": {
+                "input": 366,
+                "output": 583
+              },
+              "scores": {
+                "completeness": 5.2,
+                "accuracy": 6.1,
+                "format": 6.9,
+                "domain_relevance": 7.6,
+                "clarity": 6.9
+              },
+              "weighted_score": 6.25,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.96,
+          "std_dev": 0.5,
+          "min_score": 6.25,
+          "max_score": 7.33
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.92,
+              "tokens": {
+                "input": 483,
+                "output": 490
+              },
+              "scores": {
+                "completeness": 6.8,
+                "accuracy": 6.8,
+                "format": 6.9,
+                "domain_relevance": 5.8,
+                "clarity": 7.9
+              },
+              "weighted_score": 6.78,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.29,
+              "tokens": {
+                "input": 463,
+                "output": 333
+              },
+              "scores": {
+                "completeness": 5.9,
+                "accuracy": 6.5,
+                "format": 7.3,
+                "domain_relevance": 8.6,
+                "clarity": 7.2
+              },
+              "weighted_score": 6.83,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.62,
+              "tokens": {
+                "input": 673,
+                "output": 270
+              },
+              "scores": {
+                "completeness": 6.2,
+                "accuracy": 7.1,
+                "format": 6.3,
+                "domain_relevance": 5.9,
+                "clarity": 6.7
+              },
+              "weighted_score": 6.49,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.7,
+          "std_dev": 0.15,
+          "min_score": 6.49,
+          "max_score": 6.83
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.87,
+              "tokens": {
+                "input": 519,
+                "output": 575
+              },
+              "scores": {
+                "completeness": 6.1,
+                "accuracy": 7.4,
+                "format": 7.3,
+                "domain_relevance": 7.9,
+                "clarity": 7.3
+              },
+              "weighted_score": 7.06,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.88,
+              "tokens": {
+                "input": 467,
+                "output": 354
+              },
+              "scores": {
+                "completeness": 6.6,
+                "accuracy": 8.6,
+                "format": 6.2,
+                "domain_relevance": 8.1,
+                "clarity": 7.1
+              },
+              "weighted_score": 7.41,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.38,
+              "tokens": {
+                "input": 676,
+                "output": 399
+              },
+              "scores": {
+                "completeness": 5.3,
+                "accuracy": 5.8,
+                "format": 6.9,
+                "domain_relevance": 6.1,
+                "clarity": 5.2
+              },
+              "weighted_score": 5.8,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.76,
+          "std_dev": 0.69,
+          "min_score": 5.8,
+          "max_score": 7.41
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "openai/gpt-5.4-nano",
+      "model_name": "GPT-5.4 Nano",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.77,
+              "tokens": {
+                "input": 587,
+                "output": 273
+              },
+              "scores": {
+                "completeness": 7.9,
+                "accuracy": 7.2,
+                "format": 6.9,
+                "domain_relevance": 7.3,
+                "clarity": 9.0
+              },
+              "weighted_score": 7.56,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.22,
+              "tokens": {
+                "input": 526,
+                "output": 430
+              },
+              "scores": {
+                "completeness": 7.4,
+                "accuracy": 7.6,
+                "format": 7.3,
+                "domain_relevance": 5.8,
+                "clarity": 8.9
+              },
+              "weighted_score": 7.36,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.58,
+              "tokens": {
+                "input": 350,
+                "output": 237
+              },
+              "scores": {
+                "completeness": 6.0,
+                "accuracy": 9.2,
+                "format": 7.8,
+                "domain_relevance": 8.8,
+                "clarity": 8.1
+              },
+              "weighted_score": 7.86,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.59,
+          "std_dev": 0.21,
+          "min_score": 7.36,
+          "max_score": 7.86
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.22,
+              "tokens": {
+                "input": 658,
+                "output": 285
+              },
+              "scores": {
+                "completeness": 6.6,
+                "accuracy": 6.1,
+                "format": 7.8,
+                "domain_relevance": 7.7,
+                "clarity": 5.8
+              },
+              "weighted_score": 6.71,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.93,
+              "tokens": {
+                "input": 647,
+                "output": 201
+              },
+              "scores": {
+                "completeness": 6.9,
+                "accuracy": 6.3,
+                "format": 6.9,
+                "domain_relevance": 8.6,
+                "clarity": 7.0
+              },
+              "weighted_score": 6.98,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.67,
+              "tokens": {
+                "input": 504,
+                "output": 583
+              },
+              "scores": {
+                "completeness": 8.9,
+                "accuracy": 7.0,
+                "format": 8.5,
+                "domain_relevance": 8.3,
+                "clarity": 6.7
+              },
+              "weighted_score": 7.96,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.22,
+          "std_dev": 0.54,
+          "min_score": 6.71,
+          "max_score": 7.96
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.56,
+              "tokens": {
+                "input": 351,
+                "output": 269
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 5.6,
+                "format": 7.2,
+                "domain_relevance": 6.8,
+                "clarity": 9.1
+              },
+              "weighted_score": 7.12,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.34,
+              "tokens": {
+                "input": 508,
+                "output": 455
+              },
+              "scores": {
+                "completeness": 7.0,
+                "accuracy": 6.8,
+                "format": 7.2,
+                "domain_relevance": 9.3,
+                "clarity": 7.3
+              },
+              "weighted_score": 7.35,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.02,
+              "tokens": {
+                "input": 478,
+                "output": 591
+              },
+              "scores": {
+                "completeness": 6.4,
+                "accuracy": 5.8,
+                "format": 6.5,
+                "domain_relevance": 9.1,
+                "clarity": 8.1
+              },
+              "weighted_score": 6.81,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.09,
+          "std_dev": 0.22,
+          "min_score": 6.81,
+          "max_score": 7.35
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.11,
+              "tokens": {
+                "input": 693,
+                "output": 191
+              },
+              "scores": {
+                "completeness": 7.4,
+                "accuracy": 8.3,
+                "format": 6.8,
+                "domain_relevance": 7.8,
+                "clarity": 6.7
+              },
+              "weighted_score": 7.57,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.8,
+              "tokens": {
+                "input": 479,
+                "output": 400
+              },
+              "scores": {
+                "completeness": 7.6,
+                "accuracy": 6.8,
+                "format": 6.1,
+                "domain_relevance": 8.0,
+                "clarity": 7.2
+              },
+              "weighted_score": 7.15,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 3.28,
+              "tokens": {
+                "input": 469,
+                "output": 289
+              },
+              "scores": {
+                "completeness": 9.1,
+                "accuracy": 6.3,
+                "format": 6.1,
+                "domain_relevance": 6.6,
+                "clarity": 7.6
+              },
+              "weighted_score": 7.29,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.34,
+          "std_dev": 0.17,
+          "min_score": 7.15,
+          "max_score": 7.57
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.3,
+              "tokens": {
+                "input": 524,
+                "output": 419
+              },
+              "scores": {
+                "completeness": 9.1,
+                "accuracy": 7.3,
+                "format": 8.3,
+                "domain_relevance": 9.2,
+                "clarity": 6.4
+              },
+              "weighted_score": 8.19,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 0.65,
+              "tokens": {
+                "input": 394,
+                "output": 243
+              },
+              "scores": {
+                "completeness": 8.1,
+                "accuracy": 7.9,
+                "format": 7.0,
+                "domain_relevance": 7.2,
+                "clarity": 5.6
+              },
+              "weighted_score": 7.49,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 1.18,
+              "tokens": {
+                "input": 450,
+                "output": 442
+              },
+              "scores": {
+                "completeness": 5.8,
+                "accuracy": 8.6,
+                "format": 8.7,
+                "domain_relevance": 8.0,
+                "clarity": 6.7
+              },
+              "weighted_score": 7.49,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.72,
+          "std_dev": 0.33,
+          "min_score": 7.49,
+          "max_score": 8.19
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "qwen/qwen3.5-flash-02-23",
+      "model_name": "Qwen 3.5 Flash",
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Hazard identification with risk ratings",
+          "category": "structured_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.61,
+              "tokens": {
+                "input": 683,
+                "output": 300
+              },
+              "scores": {
+                "completeness": 7.2,
+                "accuracy": 6.7,
+                "format": 7.2,
+                "domain_relevance": 5.2,
+                "clarity": 6.0
+              },
+              "weighted_score": 6.63,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.15,
+              "tokens": {
+                "input": 568,
+                "output": 219
+              },
+              "scores": {
+                "completeness": 6.8,
+                "accuracy": 7.9,
+                "format": 5.6,
+                "domain_relevance": 6.5,
+                "clarity": 7.4
+              },
+              "weighted_score": 6.96,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.05,
+              "tokens": {
+                "input": 488,
+                "output": 560
+              },
+              "scores": {
+                "completeness": 7.6,
+                "accuracy": 6.5,
+                "format": 6.0,
+                "domain_relevance": 7.7,
+                "clarity": 7.4
+              },
+              "weighted_score": 7.02,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.87,
+          "std_dev": 0.17,
+          "min_score": 6.63,
+          "max_score": 7.02
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Safe Work Method Statement generation",
+          "category": "document_generation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.24,
+              "tokens": {
+                "input": 405,
+                "output": 249
+              },
+              "scores": {
+                "completeness": 6.9,
+                "accuracy": 6.8,
+                "format": 7.6,
+                "domain_relevance": 6.9,
+                "clarity": 6.6
+              },
+              "weighted_score": 6.94,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.5,
+              "tokens": {
+                "input": 445,
+                "output": 523
+              },
+              "scores": {
+                "completeness": 6.0,
+                "accuracy": 5.7,
+                "format": 8.1,
+                "domain_relevance": 6.9,
+                "clarity": 7.7
+              },
+              "weighted_score": 6.53,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.42,
+              "tokens": {
+                "input": 587,
+                "output": 266
+              },
+              "scores": {
+                "completeness": 6.9,
+                "accuracy": 5.7,
+                "format": 7.9,
+                "domain_relevance": 6.9,
+                "clarity": 7.3
+              },
+              "weighted_score": 6.73,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.73,
+          "std_dev": 0.17,
+          "min_score": 6.53,
+          "max_score": 6.94
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Regulatory interpretation \u2014 nuanced yes/no",
+          "category": "regulatory_interpretation",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.49,
+              "tokens": {
+                "input": 481,
+                "output": 415
+              },
+              "scores": {
+                "completeness": 6.6,
+                "accuracy": 5.8,
+                "format": 6.1,
+                "domain_relevance": 6.0,
+                "clarity": 7.1
+              },
+              "weighted_score": 6.24,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 3.01,
+              "tokens": {
+                "input": 668,
+                "output": 454
+              },
+              "scores": {
+                "completeness": 8.6,
+                "accuracy": 6.2,
+                "format": 7.7,
+                "domain_relevance": 6.6,
+                "clarity": 5.9
+              },
+              "weighted_score": 7.17,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.14,
+              "tokens": {
+                "input": 660,
+                "output": 402
+              },
+              "scores": {
+                "completeness": 5.8,
+                "accuracy": 6.6,
+                "format": 6.8,
+                "domain_relevance": 6.2,
+                "clarity": 5.5
+              },
+              "weighted_score": 6.22,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.54,
+          "std_dev": 0.44,
+          "min_score": 6.22,
+          "max_score": 7.17
+        },
+        {
+          "test_case_id": "tc_004",
+          "test_case_name": "Compliance gap analysis",
+          "category": "multi_step_reasoning",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.51,
+              "tokens": {
+                "input": 475,
+                "output": 356
+              },
+              "scores": {
+                "completeness": 6.3,
+                "accuracy": 8.4,
+                "format": 8.3,
+                "domain_relevance": 8.5,
+                "clarity": 7.1
+              },
+              "weighted_score": 7.64,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 2.13,
+              "tokens": {
+                "input": 372,
+                "output": 338
+              },
+              "scores": {
+                "completeness": 6.6,
+                "accuracy": 5.9,
+                "format": 8.0,
+                "domain_relevance": 7.9,
+                "clarity": 5.8
+              },
+              "weighted_score": 6.71,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 2.81,
+              "tokens": {
+                "input": 425,
+                "output": 287
+              },
+              "scores": {
+                "completeness": 6.4,
+                "accuracy": 6.5,
+                "format": 7.5,
+                "domain_relevance": 5.6,
+                "clarity": 6.6
+              },
+              "weighted_score": 6.5,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.95,
+          "std_dev": 0.5,
+          "min_score": 6.5,
+          "max_score": 7.64
+        },
+        {
+          "test_case_id": "tc_005",
+          "test_case_name": "Edge case \u2014 unusual scenario",
+          "category": "edge_case",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.88,
+              "tokens": {
+                "input": 612,
+                "output": 329
+              },
+              "scores": {
+                "completeness": 7.5,
+                "accuracy": 7.4,
+                "format": 5.4,
+                "domain_relevance": 6.6,
+                "clarity": 6.5
+              },
+              "weighted_score": 6.92,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 1,
+              "error": null,
+              "latency": 1.91,
+              "tokens": {
+                "input": 596,
+                "output": 309
+              },
+              "scores": {
+                "completeness": 7.2,
+                "accuracy": 7.6,
+                "format": 6.8,
+                "domain_relevance": 6.0,
+                "clarity": 5.5
+              },
+              "weighted_score": 6.91,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            },
+            {
+              "run": 2,
+              "error": null,
+              "latency": 0.78,
+              "tokens": {
+                "input": 461,
+                "output": 227
+              },
+              "scores": {
+                "completeness": 8.2,
+                "accuracy": 6.6,
+                "format": 5.5,
+                "domain_relevance": 7.0,
+                "clarity": 7.4
+              },
+              "weighted_score": 7.05,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.96,
+          "std_dev": 0.06,
+          "min_score": 6.91,
+          "max_score": 7.05
+        }
+      ],
+      "errors": 0
+    }
+  ]
+}

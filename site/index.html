@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EvalPulse — LLM Evaluation for Real Production Tasks</title>
+<meta name="description" content="Stop guessing which LLM works best. EvalPulse evaluates models against your actual production prompts using dual-judge scoring and generates comparison dashboards.">
+<style>
+:root {
+  --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --muted: #64748b;
+  --border: #e2e8f0; --accent: #3b82f6; --accent-dark: #2563eb;
+  --accent-light: #eff6ff; --green: #22c55e; --radius: 10px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* NAV */
+nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; height: 56px; position: sticky; top: 0; z-index: 20; }
+.nav-logo { font-size: 17px; font-weight: 700; color: var(--text); margin-right: auto; }
+.nav-logo span { color: var(--accent); }
+.nav-links { display: flex; gap: 8px; align-items: center; }
+.nav-link { color: var(--muted); font-size: 14px; font-weight: 500; padding: 6px 12px; border-radius: 6px; transition: color 0.15s; }
+.nav-link:hover { color: var(--accent); text-decoration: none; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 7px; font-size: 14px; font-weight: 600; transition: all 0.15s; text-decoration: none; cursor: pointer; border: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-dark); text-decoration: none; }
+.btn-outline { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.btn-lg { padding: 12px 28px; font-size: 15px; border-radius: 8px; }
+
+/* SECTIONS */
+section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+.section-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 12px; }
+
+/* HERO */
+.hero { text-align: center; padding: 96px 24px 80px; max-width: 780px; margin: 0 auto; }
+.hero h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 20px; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p { font-size: 18px; color: var(--muted); max-width: 560px; margin: 0 auto 36px; }
+.hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.hero-sub { margin-top: 20px; font-size: 13px; color: var(--muted); }
+
+/* HOW IT WORKS */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; box-shadow: var(--shadow-sm); }
+.step-num { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); color: var(--accent); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.step p { font-size: 14px; color: var(--muted); }
+
+/* FEATURES */
+.features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 40px; }
+.feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-sm); }
+.feature-icon { font-size: 22px; margin-bottom: 12px; }
+.feature h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.feature p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+/* DEMO CTA */
+.demo-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 48px 40px; text-align: center; box-shadow: var(--shadow-md); }
+.demo-section h2 { font-size: 26px; font-weight: 800; margin-bottom: 12px; }
+.demo-section p { font-size: 16px; color: var(--muted); max-width: 480px; margin: 0 auto 28px; }
+.dashboard-preview { background: #f1f5f9; border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 0 auto 28px; max-width: 680px; font-size: 13px; }
+.preview-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.preview-header strong { font-size: 14px; }
+.preview-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #ede9fe; color: #7c3aed; }
+.preview-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.preview-row:last-child { border-bottom: none; }
+.preview-name { flex: 1; font-weight: 500; color: var(--text); }
+.preview-bar-wrap { flex: 2; background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden; }
+.preview-bar { height: 100%; border-radius: 4px; }
+.preview-score { font-weight: 700; font-size: 13px; min-width: 48px; text-align: right; }
+.score-high { color: #22c55e; }
+.score-mid { color: #f59e0b; }
+
+/* QUICKSTART */
+.quickstart-section h2 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+.quickstart-section p { color: var(--muted); margin-bottom: 28px; }
+.code-block { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 24px 28px; font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace; font-size: 13.5px; line-height: 1.8; overflow-x: auto; }
+.code-block .comment { color: #64748b; }
+.code-block .cmd { color: #93c5fd; }
+.code-block .str { color: #86efac; }
+.docs-link { margin-top: 16px; font-size: 14px; color: var(--muted); }
+.docs-link a { font-weight: 500; }
+
+/* FOOTER */
+footer { border-top: 1px solid var(--border); padding: 32px 24px; text-align: center; font-size: 13px; color: var(--muted); }
+footer a { color: var(--muted); font-weight: 500; }
+footer a:hover { color: var(--accent); }
+.footer-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+/* RESPONSIVE */
+@media (max-width: 700px) {
+  .steps { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .demo-section { padding: 36px 20px; }
+  .footer-inner { justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo">Eval<span>Pulse</span></span>
+  <div class="nav-links">
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#quickstart" class="nav-link">Get started</a>
+    <a href="https://github.com/aristidesnakos/model-evals-framework" class="btn btn-outline" target="_blank">GitHub</a>
+    <a href="/demo/" class="btn btn-primary">Live Demo</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="section-label">Open source · MIT license</div>
+  <h1>Stop guessing which<br><em>LLM works best</em> for your task.</h1>
+  <p>EvalPulse evaluates models against your real production prompts, scores them with dual LLM judges, and surfaces the results in a comparison dashboard — in minutes.</p>
+  <div class="hero-ctas">
+    <a href="/demo/" class="btn btn-primary btn-lg">See Live Demo</a>
+    <a href="https://github.com/aristidesnakos/model-evals-framework" class="btn btn-outline btn-lg" target="_blank">View on GitHub</a>
+  </div>
+  <p class="hero-sub">Free &amp; open source &nbsp;·&nbsp; Runs locally or in CI &nbsp;·&nbsp; No vendor lock-in</p>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-label">How it works</div>
+  <h2 style="font-size:26px;font-weight:800;margin-bottom:4px">Three steps from prompt to answer</h2>
+  <p style="color:var(--muted);font-size:15px">No data scientists required. If you can write a prompt, you can run an eval.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Define your test cases</h3>
+      <p>Write test cases using the actual prompts you use in production. Add validation rules — required terms, minimum length, structured item counts.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Run the evaluation</h3>
+      <p>EvalPulse calls each model via OpenRouter, runs multiple passes for consistency, then scores every output across five dimensions using two independent LLM judges.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Compare the results</h3>
+      <p>Open the dashboard to see a ranked leaderboard, dimension-by-dimension breakdowns, reliability scores, and side-by-side comparisons across evaluation runs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" style="padding-top:0">
+  <div class="section-label">Features</div>
+  <h2 style="font-size:26px;font-weight:800;margin-bottom:4px">Built for real evaluations, not toy benchmarks</h2>
+  <p style="color:var(--muted);font-size:15px">Every design decision is aimed at giving you results you can trust in production.</p>
+  <div class="features-grid">
+    <div class="feature">
+      <div class="feature-icon">🎯</div>
+      <h3>Real prompts, not academic benchmarks</h3>
+      <p>Your evaluation suites use the exact prompts from your product. A compliance doc generator is evaluated on compliance prompts, not SAT questions.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚖️</div>
+      <h3>Dual-judge scoring reduces bias</h3>
+      <p>Every output is scored by two independent judge models — Claude and GPT — across five weighted dimensions. Averaged scores cancel out single-provider bias.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📊</div>
+      <h3>Five scoring dimensions</h3>
+      <p>Completeness, accuracy, format, domain relevance, and clarity — each weighted to your use case. A chatbot and a code generator should not use the same weights.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔍</div>
+      <h3>Auto model discovery</h3>
+      <p>EvalPulse monitors OpenRouter for new models matching your tier criteria — context window, cost ceiling — and flags new additions for evaluation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO CTA -->
+<section style="padding-top:0">
+  <div class="demo-section">
+    <h2>See a real evaluation result</h2>
+    <p>Click through an interactive dashboard with example results across 6 models and two evaluation suites. No install required.</p>
+
+    <!-- Inline preview of leaderboard data -->
+    <div class="dashboard-preview">
+      <div class="preview-header">
+        <strong>Regulatory Compliance Suite</strong>
+        <span class="preview-badge">regulatory_compliance</span>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">6 models · dual judge</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-name">GPT-5.4 Mini</span>
+        <div class="preview-bar-wrap"><div class="preview-bar" style="width:78%;background:#22c55e"></div></div>
+        <span class="preview-score score-high">7.8/10</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-name">GPT-5.4 Nano</span>
+        <div class="preview-bar-wrap"><div class="preview-bar" style="width:73%;background:#22c55e"></div></div>
+        <span class="preview-score score-high">7.3/10</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-name">Qwen 3.5 Plus</span>
+        <div class="preview-bar-wrap"><div class="preview-bar" style="width:70%;background:#22c55e"></div></div>
+        <span class="preview-score score-high">7.0/10</span>
+      </div>
+      <div class="preview-row">
+        <span class="preview-name">Gemini 3.1 Flash Lite</span>
+        <div class="preview-bar-wrap"><div class="preview-bar" style="width:65%;background:#f59e0b"></div></div>
+        <span class="preview-score score-mid">6.5/10</span>
+      </div>
+    </div>
+
+    <a href="/demo/" class="btn btn-primary btn-lg">Open Live Dashboard →</a>
+  </div>
+</section>
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="quickstart-section">
+  <div class="section-label">Get started</div>
+  <h2>Up and running in 60 seconds</h2>
+  <p>Requires Python 3.10+ and an OpenRouter API key.</p>
+  <div class="code-block">
+    <div><span class="comment"># 1. Clone and install</span></div>
+    <div><span class="cmd">git clone</span> <span class="str">https://github.com/aristidesnakos/model-evals-framework</span> &amp;&amp; <span class="cmd">cd</span> model-evals-framework</div>
+    <div><span class="cmd">pip install</span> -r requirements.txt</div>
+    <div>&nbsp;</div>
+    <div><span class="comment"># 2. Add your API key</span></div>
+    <div><span class="cmd">cp</span> .env.example .env &nbsp;<span class="comment"># then add OPENROUTER_API_KEY</span></div>
+    <div>&nbsp;</div>
+    <div><span class="comment"># 3. Create your first evaluation suite</span></div>
+    <div><span class="cmd">python</span> evalpulse.py init</div>
+    <div>&nbsp;</div>
+    <div><span class="comment"># 4. Run a dry-run to verify (no cost), then evaluate</span></div>
+    <div><span class="cmd">python</span> evalpulse.py --dry-run --suite getting_started</div>
+    <div><span class="cmd">python</span> evalpulse.py --run-eval --suite getting_started --dashboard</div>
+  </div>
+  <p class="docs-link">Full documentation and configuration reference on <a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">GitHub →</a></p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <span>EvalPulse &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; Open source</span>
+    <span>
+      <a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="/demo/">Live Demo</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
