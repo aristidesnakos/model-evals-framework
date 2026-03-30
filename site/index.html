@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EvalPulse — LLM Evaluation for Real Production Tasks</title>
-<meta name="description" content="Stop guessing which LLM works best. EvalPulse evaluates models against your actual production prompts using dual-judge scoring and generates comparison dashboards.">
+<meta name="description" content="Stop guessing which AI model works best. EvalPulse tests models against your actual prompts and tells you which one is fastest, cheapest, and most accurate for your use case.">
 <style>
 :root {
   --bg: #f8fafc; --surface: #ffffff; --text: #0f172a; --muted: #64748b;
@@ -117,7 +117,7 @@ footer a:hover { color: var(--accent); }
 <div class="hero">
   <div class="section-label">Open source · MIT license</div>
   <h1>Stop guessing which<br><em>LLM works best</em> for your task.</h1>
-  <p>EvalPulse evaluates models against your real production prompts, scores them with dual LLM judges, and surfaces the results in a comparison dashboard — in minutes.</p>
+  <p>Test AI models against the prompts you actually use, see which one is fastest, cheapest, and most accurate — with a comparison dashboard you can share with your team.</p>
   <div class="hero-ctas">
     <a href="/demo/" class="btn btn-primary btn-lg">See Live Demo</a>
     <a href="https://github.com/aristidesnakos/model-evals-framework" class="btn btn-outline btn-lg" target="_blank">View on GitHub</a>
@@ -139,7 +139,7 @@ footer a:hover { color: var(--accent); }
     <div class="step">
       <div class="step-num">2</div>
       <h3>Run the evaluation</h3>
-      <p>EvalPulse calls each model via OpenRouter, runs multiple passes for consistency, then scores every output across five dimensions using two independent LLM judges.</p>
+      <p>EvalPulse sends your prompts to each model, runs multiple passes to check consistency, and grades every output on quality, accuracy, and format — automatically.</p>
     </div>
     <div class="step">
       <div class="step-num">3</div>
@@ -152,8 +152,8 @@ footer a:hover { color: var(--accent); }
 <!-- FEATURES -->
 <section id="features" style="padding-top:0">
   <div class="section-label">Features</div>
-  <h2 style="font-size:26px;font-weight:800;margin-bottom:4px">Built for real evaluations, not toy benchmarks</h2>
-  <p style="color:var(--muted);font-size:15px">Every design decision is aimed at giving you results you can trust in production.</p>
+  <h2 style="font-size:26px;font-weight:800;margin-bottom:4px">Built for real decisions, not toy benchmarks</h2>
+  <p style="color:var(--muted);font-size:15px">Answer the question: which model should I actually be paying for?</p>
   <div class="features-grid">
     <div class="feature">
       <div class="feature-icon">🎯</div>
@@ -162,18 +162,18 @@ footer a:hover { color: var(--accent); }
     </div>
     <div class="feature">
       <div class="feature-icon">⚖️</div>
-      <h3>Dual-judge scoring reduces bias</h3>
-      <p>Every output is scored by two independent judge models — Claude and GPT — across five weighted dimensions. Averaged scores cancel out single-provider bias.</p>
+      <h3>Scores you can actually trust</h3>
+      <p>Every output is graded by two independent AI models, not just one. Their scores are averaged so no single provider's bias skews the results.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">📊</div>
-      <h3>Five scoring dimensions</h3>
-      <p>Completeness, accuracy, format, domain relevance, and clarity — each weighted to your use case. A chatbot and a code generator should not use the same weights.</p>
+      <h3>Graded on what matters to you</h3>
+      <p>Each output is scored on completeness, accuracy, format, relevance, and clarity — with weights you control. A safety document and a chatbot need different standards.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">🔍</div>
-      <h3>Auto model discovery</h3>
-      <p>EvalPulse monitors OpenRouter for new models matching your tier criteria — context window, cost ceiling — and flags new additions for evaluation.</p>
+      <h3>New models, automatically tested</h3>
+      <p>EvalPulse watches for new models that fit your budget and flags them for evaluation. When a cheaper or faster option appears, you'll know.</p>
     </div>
   </div>
 </section>
@@ -189,7 +189,7 @@ footer a:hover { color: var(--accent); }
       <div class="preview-header">
         <strong>Regulatory Compliance Suite</strong>
         <span class="preview-badge">regulatory_compliance</span>
-        <span style="margin-left:auto;color:var(--muted);font-size:12px">6 models · dual judge</span>
+        <span style="margin-left:auto;color:var(--muted);font-size:12px">6 models compared</span>
       </div>
       <div class="preview-row">
         <span class="preview-name">GPT-5.4 Mini</span>
