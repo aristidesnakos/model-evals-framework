@@ -248,7 +248,7 @@ async function renderIndex() {
   }
 
   // Auto-open the first run so visitors see charts immediately
-  if (reports.length === 1 && location.hash === '#/') {
+  if (reports.length === 1 && (!location.hash || location.hash === '#/')) {
     location.hash = '#/run/' + reports[0].filename;
     return;
   }
