@@ -152,14 +152,14 @@ const selected = new Set();
 
 async function fetchList() {
   if (cache._list) return cache._list;
-  const r = await fetch('./data/index.json');
+  const r = await fetch('/demo/data/index.json');
   cache._list = await r.json();
   return cache._list;
 }
 
 async function fetchReport(filename) {
   if (cache[filename]) return cache[filename];
-  const r = await fetch('./data/' + filename);
+  const r = await fetch('/demo/data/' + filename);
   cache[filename] = await r.json();
   return cache[filename];
 }
