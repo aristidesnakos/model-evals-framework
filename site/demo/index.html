@@ -101,6 +101,21 @@ tr:hover td { background: var(--accent-light); }
 /* Charts */
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .chart-container { position: relative; height: 280px; }
+.scatter-container { position: relative; height: 440px; }
+
+/* Calibration / methodology note */
+.calibration-note { font-size: 12px; color: var(--muted); margin-top: 14px; padding: 10px 12px; background: var(--bg); border-radius: 6px; border-left: 3px solid var(--accent); line-height: 1.55; }
+.calibration-note strong { color: var(--text); }
+
+/* Leaderboard badges */
+.badge-viable { background: #dcfce7; color: #166534; }
+.badge-slow { background: #fef3c7; color: #92400e; }
+.badge-fail { background: #fee2e2; color: #991b1b; }
+.badge-runs { background: #f1f5f9; color: #475569; }
+
+/* Axis caption above scatter (helps non-technical readers) */
+.scatter-caption { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
+.scatter-caption .up-right { color: var(--green); font-weight: 600; }
 
 /* Collapsibles */
 details { margin-bottom: 4px; }
@@ -140,7 +155,8 @@ input[type=checkbox] { accent-color: var(--accent); }
   <h1>EvalPulse</h1>
   <nav>
     <a href="/" style="color:var(--muted);font-size:13px;font-weight:500;text-decoration:none;border:1px solid var(--border);padding:6px 14px;border-radius:6px;background:var(--surface)" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">&larr; Back</a>
-    <a href="#/" class="nav-link active" data-route="index">Runs</a>
+    <a href="#/" class="nav-link active" data-route="leaderboard">Leaderboard</a>
+    <a href="#/runs" class="nav-link" data-route="runs">Runs</a>
     <button class="btn-compare" id="compareBtn" onclick="goCompare()">Compare Selected</button>
   </nav>
 </header>
@@ -235,10 +251,63 @@ function groupByCategory(testCases) {
   return map;
 }
 
+// Production-viability latency cutoff (seconds). Models above this are flagged as unsuitable for latency-sensitive production workloads.
+const PRODUCTION_LATENCY_CUTOFF = 15;
+
+// Aggregate all runs in the manifest into a unified per-model summary.
+// For models that appear in multiple runs, values are averaged across those runs.
+async function aggregateAllRuns() {
+  const reports = await fetchList();
+  const allData = await Promise.all(reports.map(r => fetchReport(r.filename)));
+
+  // model_id -> { id, name, runs: [{runId, summary}] }
+  const modelMap = new Map();
+  allData.forEach(data => {
+    modelSummaries(data).forEach(s => {
+      if (!modelMap.has(s.id)) modelMap.set(s.id, { id: s.id, name: s.name, runs: [] });
+      modelMap.get(s.id).runs.push({ runId: data.run_id, suite: data.suite_name, summary: s });
+    });
+  });
+
+  const aggregated = [];
+  modelMap.forEach(entry => {
+    const rs = entry.runs;
+    const mean = arr => arr.reduce((a,b)=>a+b,0) / arr.length;
+    const avg  = +mean(rs.map(r => r.summary.avg)).toFixed(2);
+    const lat  = +mean(rs.map(r => r.summary.lat)).toFixed(1);
+    const std  = +mean(rs.map(r => r.summary.std)).toFixed(2);
+    const tokens = rs.reduce((a,b) => a + b.summary.tokens, 0);
+    const errors = rs.reduce((a,b) => a + b.summary.errors, 0);
+    aggregated.push({
+      id: entry.id,
+      name: entry.name,
+      avg, lat, std, tokens, errors,
+      min: +Math.min(...rs.map(r => r.summary.min)).toFixed(1),
+      max: +Math.max(...rs.map(r => r.summary.max)).toFixed(1),
+      runCount: rs.length,
+      runIds: rs.map(r => r.runId),
+      productionViable: lat <= PRODUCTION_LATENCY_CUTOFF,
+    });
+  });
+
+  // Calibration: shared models (appearing in >1 run) let us verify runs are comparable.
+  const calibration = [];
+  modelMap.forEach(entry => {
+    if (entry.runs.length >= 2) {
+      const scores = entry.runs.map(r => r.summary.avg);
+      const delta = +(Math.max(...scores) - Math.min(...scores)).toFixed(2);
+      calibration.push({ name: entry.name, delta, runCount: entry.runs.length });
+    }
+  });
+
+  aggregated.sort((a,b) => b.avg - a.avg);
+  return { aggregated, calibration, reportCount: allData.length, testCaseCount: allData[0]?.results[0]?.test_results?.length || 0 };
+}
+
 // --- RENDERERS ---
 
-async function renderIndex() {
-  updateNav('index');
+async function renderLeaderboard() {
+  updateNav('leaderboard');
   const app = document.getElementById('app');
   const reports = await fetchList();
 
@@ -247,9 +316,211 @@ async function renderIndex() {
     return;
   }
 
-  // Auto-open the first run so visitors see charts immediately
-  if (reports.length === 1 && (!location.hash || location.hash === '#/')) {
-    location.hash = '#/run/' + reports[0].filename;
+  const { aggregated, calibration, reportCount, testCaseCount } = await aggregateAllRuns();
+  if (!aggregated.length) {
+    app.innerHTML = '<div class="empty-state"><h2>No model results found</h2></div>';
+    return;
+  }
+
+  const viableCount = aggregated.filter(m => m.productionViable).length;
+  const topScore    = aggregated[0].avg;
+
+  // Hero
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> <span class="badge badge-suite">swms_safety_generator</span></span>
+      <span><strong>Runs aggregated</strong> ${reportCount}</span>
+      <span><strong>Test cases</strong> ${testCaseCount}</span>
+      <span><strong>Production cutoff</strong> &le;${PRODUCTION_LATENCY_CUTOFF}s latency</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num">${aggregated.length}</span><span class="hero-label">Models Evaluated</span></div>
+      <div class="hero-stat"><span class="hero-num score ${scoreClass(topScore)}">${topScore}</span><span class="hero-label">Top Score</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--green)">${viableCount}</span><span class="hero-label">Production Viable</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--red)">${aggregated.length - viableCount}</span><span class="hero-label">Too Slow</span></div>
+    </div>
+  </div>`;
+
+  // Score vs Latency scatter — the headline chart
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Quality vs Speed Trade-off</h2>
+      <div class="inline-legend">
+        <span class="key-item"><span class="dot dot-green"></span>&le;${PRODUCTION_LATENCY_CUTOFF}s Production viable</span>
+        <span class="key-item"><span class="dot dot-amber"></span>15&ndash;60s Batch only</span>
+        <span class="key-item"><span class="dot dot-red"></span>&gt;60s Research/Offline</span>
+      </div>
+    </div>
+    <div class="scatter-container"><canvas id="scatter"></canvas></div>
+    <p class="scatter-caption">Higher is better &middot; Left is faster &middot; <span class="up-right">Top-left quadrant wins</span></p>`;
+
+  if (calibration.length) {
+    const parts = calibration.map(c => `<strong>${c.name}</strong> (&Delta;${c.delta.toFixed(2)})`).join(', ');
+    html += `<div class="calibration-note">
+      <strong>Cross-run calibration.</strong> These models appeared in multiple runs: ${parts}.
+      Small deltas (&lt;0.3) confirm the runs are methodologically comparable, so coalescing them into one leaderboard is defensible.
+    </div>`;
+  }
+  html += `</div>`;
+
+  // Unified leaderboard table
+  html += `<div class="card">
+    <div class="section-header">
+      <h2>Unified Leaderboard</h2>
+      <div class="inline-legend">Aggregated across ${reportCount} run${reportCount>1?'s':''} &middot; click a model row to dig in</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th>
+      <th>Model</th>
+      <th>Score <span class="scale-note">(1&ndash;10)</span></th>
+      <th>Consistency</th>
+      <th>Avg Latency</th>
+      <th>Production</th>
+      <th>Runs</th>
+      <th>Total Tokens</th>
+    </tr></thead><tbody>`;
+  aggregated.forEach((m, i) => {
+    const viable = m.productionViable
+      ? `<span class="badge badge-viable">&check; Viable</span>`
+      : m.lat <= 60
+        ? `<span class="badge badge-slow">Batch only</span>`
+        : `<span class="badge badge-fail">Too slow</span>`;
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i+1}</td>
+      <td style="font-weight:500">${m.name}</td>
+      <td><span class="score ${scoreClass(m.avg)}">${m.avg.toFixed(1)}</span><span class="score-range-hint">${m.min}&ndash;${m.max} range</span></td>
+      <td style="color:${stdColor(m.std)};font-weight:600">${m.std}</td>
+      <td style="font-variant-numeric:tabular-nums">${m.lat}s</td>
+      <td>${viable}</td>
+      <td><span class="badge badge-runs">${m.runCount}&times;</span></td>
+      <td style="font-variant-numeric:tabular-nums">${m.tokens.toLocaleString()}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  app.innerHTML = html;
+
+  // --- Scatter plot ---
+  const scores = aggregated.map(m => m.avg);
+  const lats = aggregated.map(m => m.lat);
+  const yMin = Math.max(0, Math.floor((Math.min(...scores) - 0.5) * 2) / 2);
+  const yMax = Math.min(10, Math.ceil((Math.max(...scores) + 0.5) * 2) / 2);
+  const xMax = Math.ceil((Math.max(...lats) + 10) / 10) * 10;
+
+  const pointColor = m => m.lat <= PRODUCTION_LATENCY_CUTOFF ? '#22c55e' : m.lat <= 60 ? '#f59e0b' : '#ef4444';
+
+  // Custom plugin: draw model name next to each point and a "15s cutoff" annotation
+  const scatterLabels = {
+    id: 'scatterLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea, scales } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta) return;
+
+      // Model-name labels
+      ctx.save();
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#1e293b';
+      ctx.textBaseline = 'middle';
+      meta.data.forEach((pt, i) => {
+        const d = chart.data.datasets[0].data[i];
+        if (!d || !pt) return;
+        // Flip label to the left if we're within 110px of the right edge
+        const rightSpace = chartArea.right - pt.x;
+        if (rightSpace < 110) {
+          ctx.textAlign = 'right';
+          ctx.fillText(d.model, pt.x - 10, pt.y);
+        } else {
+          ctx.textAlign = 'left';
+          ctx.fillText(d.model, pt.x + 10, pt.y);
+        }
+      });
+      ctx.restore();
+
+      // "15s Production cutoff" annotation
+      const xPx = scales.x.getPixelForValue(PRODUCTION_LATENCY_CUTOFF);
+      ctx.save();
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#ef4444';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`${PRODUCTION_LATENCY_CUTOFF}s production cutoff`, xPx + 4, chartArea.top + 4);
+      ctx.restore();
+    }
+  };
+
+  new Chart(document.getElementById('scatter'), {
+    type: 'scatter',
+    plugins: [scatterLabels],
+    data: {
+      datasets: [
+        {
+          label: 'Models',
+          data: aggregated.map(m => ({ x: m.lat, y: m.avg, model: m.name, viable: m.productionViable })),
+          backgroundColor: aggregated.map(pointColor),
+          borderColor: aggregated.map(pointColor),
+          pointRadius: 8,
+          pointHoverRadius: 11,
+          pointBorderWidth: 2,
+          pointBorderColor: '#ffffff',
+        },
+        {
+          type: 'line',
+          label: 'Cutoff',
+          data: [{ x: PRODUCTION_LATENCY_CUTOFF, y: yMin }, { x: PRODUCTION_LATENCY_CUTOFF, y: yMax }],
+          borderColor: '#ef4444',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          showLine: true,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 24, top: 8 } },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'Avg Latency (seconds) \u2192 slower', font: { size: 12, weight: '600' }, color: '#64748b' },
+          min: 0,
+          max: xMax,
+          grid: { color: '#f1f5f9' },
+          ticks: { stepSize: xMax > 100 ? 20 : 10, font: { size: 11 } }
+        },
+        y: {
+          title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
+          min: yMin,
+          max: yMax,
+          grid: { color: '#f1f5f9' },
+          ticks: { stepSize: 0.5, font: { size: 11 } }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.label === 'Cutoff') return null;
+              const d = ctx.raw;
+              return `${d.model}: ${d.y.toFixed(1)}/10 at ${d.x}s`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+async function renderRunsList() {
+  updateNav('runs');
+  const app = document.getElementById('app');
+  const reports = await fetchList();
+
+  if (!reports.length) {
+    app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>python evalpulse.py --run-eval</code></p></div>';
     return;
   }
 
@@ -639,10 +910,12 @@ function route() {
   const hash = location.hash || '#/';
   if (hash.startsWith('#/run/')) {
     renderRun(hash.slice(6));
+  } else if (hash.startsWith('#/runs')) {
+    renderRunsList();
   } else if (hash.startsWith('#/compare')) {
     renderCompare();
   } else {
-    renderIndex();
+    renderLeaderboard();
   }
 }
 
