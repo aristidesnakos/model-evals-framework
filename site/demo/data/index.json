@@ -1,5 +1,19 @@
 [
   {
+    "filename": "swms_safety_generator_20260410_162637.json",
+    "run_id": "20260410_162637",
+    "suite_name": "swms_safety_generator",
+    "model_count": 5,
+    "top_model": {
+      "name": "GPT-5.4 Nano",
+      "avg": 8.1
+    },
+    "score_range": [
+      7.3,
+      8.1
+    ]
+  },
+  {
     "filename": "swms_safety_generator_20260330_183136.json",
     "run_id": "20260330_183136",
     "suite_name": "swms_safety_generator",
