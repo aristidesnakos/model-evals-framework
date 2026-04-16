@@ -1,0 +1,527 @@
+{
+  "suite_name": "school_classifier",
+  "description": "Evaluates models on classifying South African school emails into 6 categories (homework, sports, schedule_change, event, admin, announcement). Uses the exact production prompt from Setian's IngestionService. Accuracy target: 85%+. Tests include edge cases at category boundaries.",
+  "runs_per_test": 3,
+  "scoring_weights": {
+    "completeness": 0.10,
+    "accuracy": 0.50,
+    "format": 0.20,
+    "domain_relevance": 0.10,
+    "clarity": 0.10
+  },
+  "test_cases": [
+    {
+      "id": "tc_01",
+      "name": "Maths test notice (homework, not schedule_change)",
+      "category": "homework",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Grade 8 Maths Test — Friday 21 March\n\nGrade 8 learners will write their Chapter 5 Algebra assessment on Friday 21 March during Period 3. All formulae must be memorised. No calculator permitted. Please ensure your child has a ruler and protractor.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "homework"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'homework'. This is a test/assessment notice — learners must prepare for it. The date and period reference should NOT trigger 'schedule_change' since the school day itself isn't changing.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'homework'. This is an assessment notice, not a schedule change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous for this test/exam scenario"
+      }
+    },
+    {
+      "id": "tc_02",
+      "name": "Swimming gala (sports, not event)",
+      "category": "sports",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Swimming Gala 2026 — Save the Date\n\nThe annual inter-house swimming gala will be held on Saturday 22 March at 09:00 at the school pool. Supporters welcome. Please wear house colours. Tuckshop will be open. Events run from 09:00 to 14:00.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "sports"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'sports'. A swimming gala is competitive organised sport, even though it has event-like logistics (save the date, supporters welcome). Sports takes priority over event per the FIRST matching rule.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'sports'. A gala is competitive sport, not a general event.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly prioritises sports over event"
+      }
+    },
+    {
+      "id": "tc_03",
+      "name": "Assembly moved — schedule change",
+      "category": "schedule_change",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Schedule Change — Thursday 19 March\n\nPlease note that this Thursday's assembly has been moved from Period 1 to Period 5 due to a visiting speaker in the morning. Normal classes will run Periods 1–4. Learners must be in full school uniform.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "schedule_change"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'schedule_change'. The assembly period is being swapped — this directly changes the normal school day.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'schedule_change'. Period swap is a direct timetable change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is straightforward for this clear schedule change"
+      }
+    },
+    {
+      "id": "tc_04",
+      "name": "Parent evening — event",
+      "category": "event",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Parent Evening Invitation\n\nParent-teacher evening for Grades 6–9 is scheduled for Wednesday 26 March from 17:00–20:00. Booking slots open Monday via the school portal. Each slot is 10 minutes. Priority given to core subjects.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "event"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'event'. Parent evening is a scheduled occasion parents attend.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'event'. Parent evening is listed explicitly in the event definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_05",
+      "name": "Science fair project deadline — homework",
+      "category": "homework",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Science Fair Reminder\n\nGrade 10 science fair project submissions are due by Friday 28 March. Projects must be submitted via the portal with a 500-word abstract. Late submissions will not be accepted. Display boards available from the science office.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "homework"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'homework'. This is a project submission deadline — academic work learners must submit.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'homework'. Project submission is academic work.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly identifies this as academic, not event"
+      }
+    },
+    {
+      "id": "tc_06",
+      "name": "Easter holiday closure (admin, not schedule_change)",
+      "category": "admin",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Easter Holiday Notice\n\nThe school will be closed on Friday 18 April for Good Friday and Monday 21 April for Family Day. Normal classes resume on Tuesday 22 April. Holiday care is not available during this period.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "admin"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'admin'. School closures for holidays are governance/operations, not schedule_change. Schedule_change is for changes within a school day (period swaps, early dismissal), not planned holiday closures.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'admin'. Holiday closure is school governance, not a timetable change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly distinguishes closure from schedule change"
+      }
+    },
+    {
+      "id": "tc_07",
+      "name": "Rugby tour — sports",
+      "category": "sports",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: U15 Rugby Tour — Cape Town\n\nConsent forms for the U15 rugby tour to Cape Town (7–9 April) must be returned by Wednesday 20 March. The tour includes matches against Bishops and Rondebosch Boys. Cost: R3 500 per player. Contact the sports office for details.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "sports"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'sports'. Rugby tour with competitive matches is organised sport.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'sports'. Tour with matches is competitive sport.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_08",
+      "name": "School camp — event",
+      "category": "event",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Grade 6 Camp Packing List\n\nGrade 6 learners depart for Outdoor Education Camp at Magoebaskloof on Monday 24 March and return Wednesday 26 March. Please review the packing list sent last week. No electronic devices permitted. Medical forms must be submitted by Thursday 20 March.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "event"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'event'. School camp is a multi-day occasion learners attend — not a schedule change.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'event'. Camp is a scheduled occasion, not a timetable change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly identifies camp as event"
+      }
+    },
+    {
+      "id": "tc_09",
+      "name": "History essay — homework",
+      "category": "homework",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Grade 11 History Essay Due Monday\n\nA reminder that the Grade 11 History essay on the Cold War is due Monday 24 March. Minimum 1500 words, MLA format. Sources must include at least two primary documents. Submit via Google Classroom by 08:00.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "homework"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'homework'. Essay submission deadline with requirements.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'homework'. Clear academic assignment.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_10",
+      "name": "Lunch menu update — announcement",
+      "category": "announcement",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: New Lunch Menu — Term 2\n\nPlease find attached the updated tuckshop menu for Term 2, effective 1 April. Prices have been adjusted to reflect supplier costs. Halal and vegetarian options continue to be available daily. Pre-orders can be placed via the school app by 08:00 each morning.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "announcement"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'announcement'. General school information — menu update doesn't fit any higher-priority category.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'announcement'. Menu update is general information.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_11",
+      "name": "Cricket match — sports",
+      "category": "sports",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Cricket First XI vs St Stithians — Saturday\n\nThe First XI cricket match against St Stithians will take place at home on Saturday 29 March, starting at 10:00. Players must report to the pavilion at 08:30 in full whites. Supporters welcome — refreshments available at the clubhouse.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "sports"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'sports'. Competitive cricket match fixture.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'sports'. Match day logistics for competitive sport.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_12",
+      "name": "Early dismissal — schedule_change",
+      "category": "schedule_change",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Early Dismissal — Wednesday 2 April\n\nAll learners will be dismissed at 12:00 on Wednesday 2 April due to staff development training. Aftercare will operate from 12:00–17:00 as normal. Please make transport arrangements accordingly.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "schedule_change"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'schedule_change'. Early dismissal directly changes the school day.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'schedule_change'. Early dismissal is a timetable change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_13",
+      "name": "School fees — admin",
+      "category": "admin",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: School Fees Statement — March 2026\n\nYour March 2026 school fees statement is available on the parent portal. Please note that outstanding balances must be settled by 31 March. Queries can be directed to the bursar at fees@saheti.co.za.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "admin"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'admin'. Financial communication is school operations/governance.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'admin'. Fees are financial administration.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_14",
+      "name": "Career day — event (not schedule_change)",
+      "category": "event",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Grade 9 Career Day — Thursday 3 April\n\nGrade 9 Career Day will be held on Thursday 3 April in the school hall from 09:00–13:00. Guest speakers include professionals from engineering, medicine, law, and IT. Learners should prepare two questions for each speaker. Normal classes are suspended for Grade 9 on this day.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "event"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'event'. Career day is a scheduled occasion, even though it mentions classes being suspended. The primary purpose is the event itself, and 'career days' is explicitly listed in the event definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'event'. Career day is listed in the event definition and takes priority.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly prioritises event over schedule_change"
+      }
+    },
+    {
+      "id": "tc_15",
+      "name": "Exam timetable (homework, not schedule_change)",
+      "category": "homework",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Matric Trial Exam Timetable\n\nThe Grade 12 trial examination timetable for August 2026 is now available on the portal. Please review the dates and note any clashes. Study leave begins Monday 4 August. All subjects will be examined over three weeks.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "homework"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'homework'. Exam timetables are about academic assessments learners must prepare for. The word 'timetable' should NOT trigger 'schedule_change' — homework takes priority per FIRST matching rule, and 'exam timetables' is explicitly listed in the homework definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'homework'. Exam timetable is academic preparation, not a schedule change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly identifies 'timetable' as academic, not schedule"
+      }
+    },
+    {
+      "id": "tc_16",
+      "name": "Photo day — announcement",
+      "category": "announcement",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Reminder: Photo Day Tomorrow\n\nSchool photos will be taken tomorrow, Wednesday 19 March. All learners must be in full winter uniform. Individual and class photos will be taken. Order forms were sent home last week — please return with payment by Friday.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "announcement"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'announcement'. Photo day is general school information — explicitly listed in the announcement definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'announcement'. Photo day is general information.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_17",
+      "name": "Netball trials — sports",
+      "category": "sports",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Netball Trials — Week of 24 March\n\nOpen netball trials for U14, U16, and Open age groups will take place during the week of 24 March. U14 trials: Monday 15:00. U16 trials: Tuesday 15:00. Open trials: Wednesday 15:00. All at the outdoor courts. Bring full kit and water.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "sports"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'sports'. Trials are part of competitive sport selection.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'sports'. Trials are explicitly listed in the sports definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_18",
+      "name": "Code of conduct (admin, not announcement)",
+      "category": "admin",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Updated Code of Conduct — 2026\n\nThe updated learner Code of Conduct for 2026 has been published on the school website. Key changes include the cellphone policy (phones must be switched off and stored in lockers during school hours) and the updated dress code for non-uniform days. Please review with your child.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "admin"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'admin'. Code of conduct is a policy document — explicitly listed in the admin definition. Should NOT be classified as announcement even though it's informational, because admin takes priority.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'admin'. Code of conduct is school governance/policy.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly prioritises admin over announcement"
+      }
+    },
+    {
+      "id": "tc_19",
+      "name": "Science project — homework",
+      "category": "homework",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Grade 7 Natural Science Project\n\nGrade 7 Natural Science projects on renewable energy must be submitted by Friday 4 April. Projects should include a working model or poster presentation. Rubrics are available on Google Classroom. Presentations will take place the following week.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "homework"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'homework'. Academic project with submission deadline.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'homework'. Project submission is academic work.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_20",
+      "name": "Founders day assembly (event, not schedule_change)",
+      "category": "event",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Founders Day Assembly — Friday 28 March\n\nThe annual Founders Day assembly will be held on Friday 28 March at 09:00 in the school hall. Parents are welcome to attend. The ceremony includes musical performances, awards, and an address by the guest speaker. Normal Period 1 classes are cancelled.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "event"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'event'. Founders Day assembly is a scheduled occasion parents attend. Even though Period 1 is cancelled, the primary purpose is the event itself. 'Assemblies' is explicitly listed in the event definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'event'. Assembly is listed in the event definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly prioritises event over schedule_change"
+      }
+    },
+    {
+      "id": "tc_21",
+      "name": "Water polo results — sports",
+      "category": "sports",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Water Polo Results — Weekend Fixtures\n\nWell done to our U16 water polo team who beat King David 8-4 on Saturday. The U14 team drew 5-5 against Jeppe. Next weekend both teams travel to Pretoria Boys. Team lists will be posted on Thursday. Please check the sports notice board.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "sports"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'sports'. Match results and upcoming fixtures.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'sports'. Results are explicitly listed in the sports definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_22",
+      "name": "Load shedding plan (admin, not announcement)",
+      "category": "admin",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Load Shedding Contingency Plan\n\nIn the event of Stage 4+ load shedding during school hours, the following contingency applies: the generator covers the admin block and Grade 12 classrooms. Other grades may be moved to the hall. Hot lunch service will not be available. Please ensure your child has a packed lunch on affected days.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "admin"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'admin'. Load shedding contingency is a governance/operations policy. 'Load shedding' is explicitly listed in the admin definition. Should NOT be announcement.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'admin'. Load shedding policy is school operations.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly identifies this as governance, not general info"
+      }
+    },
+    {
+      "id": "tc_23",
+      "name": "Period swap — schedule_change",
+      "category": "schedule_change",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Timetable Change — Periods 3 and 4 Swapped Tomorrow\n\nDue to the auditorium being booked for matric orals, Periods 3 and 4 are swapped for all grades tomorrow (Thursday 20 March). Music and Drama lessons move to Period 3; Maths moves to Period 4. All other periods remain unchanged.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "schedule_change"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'schedule_change'. Direct period swap changes the school day.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'schedule_change'. Period swap is a timetable change.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_24",
+      "name": "Musical auditions — event",
+      "category": "event",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Invitation: School Musical Auditions\n\nAuditions for the 2026 school musical (Grease) will be held on Tuesday 1 April and Wednesday 2 April after school in the auditorium. Prepare a solo song (1 minute max) and a short monologue. Sign-up sheets are outside the Drama office. All grades welcome.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "event"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'event'. Auditions are a scheduled occasion — explicitly listed in the event definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'event'. Auditions are listed in the event definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_25",
+      "name": "Bus route delay — schedule_change",
+      "category": "schedule_change",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Important: Bus Route 3 Delayed\n\nBus Route 3 (Sandton – Saheti) will depart 15 minutes later than usual tomorrow morning due to roadworks on Rivonia Road. Expected arrival at school: 07:45 instead of 07:30. Afternoon departure remains unchanged at 14:30.",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "schedule_change"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'schedule_change'. Transport delay directly affects learner arrival — 'transport delays' is explicitly listed in the schedule_change definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'schedule_change'. Transport delay is listed in the definition.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is unambiguous"
+      }
+    },
+    {
+      "id": "tc_26",
+      "name": "Chickenpox health notice — announcement (real Saheti content)",
+      "category": "announcement",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Chickenpox Alert — Foundation Phase & Grade 6\n\nWe have reported cases of Chickenpox (Varicella – Zoster virus) in the foundation phase and Grade 6 group (3 siblings). As per school policy, please do not send your child to school if presenting with ANY flu-like symptoms. Chickenpox's red, blister rash appears 10 to 21 days after exposure (incubation period) and usually lasts about 5 to 10 days. Chickenpox is contagious beginning 1 to 2 days before rash onset until all lesions have crusted. Symptoms include fever, loss of appetite, headache, tiredness and malaise. Please ensure your children's vaccination schedules are kept up to date. — Sr Sarah Wessels, Saheti School Nurse",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "announcement"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'announcement'. Health notice is a broadcast to all parents — 'health notices' is explicitly listed in the announcement definition. Edge case: could be admin (health policy), but primary purpose is informational broadcast, not governance.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'announcement'. Health notice is broadcast information, not admin policy.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice correctly identifies this as broadcast info, not governance"
+      }
+    },
+    {
+      "id": "tc_27",
+      "name": "Head lice notice — announcement (real Saheti content)",
+      "category": "announcement",
+      "prompt": "You are a school email classifier. Classify the email into exactly one category.\n\nCategory definitions (use the FIRST matching rule):\n- homework: Tests, exams, assignments, projects, essays, study material, exam timetables — anything learners must prepare for or submit\n- sports: Matches, fixtures, trials, tours, galas, results — anything about competitive or organised sport\n- schedule_change: Changes to the normal school day — early dismissal, period swaps, transport delays, class cancellations\n- event: Camps, concerts, career days, assemblies, auditions, parent evenings — scheduled occasions parents/learners attend\n- admin: Policies, fees, school closures (holidays/load shedding), codes of conduct, forms — school operations and governance\n- announcement: General information that doesn't fit above — menus, photo days, health notices, reminders\n\nReturn ONLY valid JSON: {\"category\": \"<category>\", \"title\": \"<concise title under 80 chars>\"}\n\n---\n\nSubject: Head Lice Notice — Grades 1, 2 & Play Schools\n\nWe have reported cases of Head Lice in Grade 1, Grade 2 and in the Play Schools toddler group. Lice cannot jump or fly and are usually transmitted by direct contact with lice-infested persons. Frequent bathing or shampooing of the hair will not prevent head lice or eliminate them when established. Do not allow your child to attend school with untreated head lice. For effective treatment, follow thorough shampooing and combing as per product insert instructions. Inform school, family, friends and extramural clubs. Report cases — confidentiality is always respected. — Sr Sarah Wessels, Saheti School Nurse",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["category", "announcement"],
+        "min_length": 20
+      },
+      "reference_answer": "Must classify as 'announcement'. Health notice broadcast — same pattern as chickenpox alert. 'Health notices' is explicitly in the announcement definition.",
+      "scoring_criteria": {
+        "completeness": "Response contains both 'category' and 'title' fields",
+        "accuracy": "Category is exactly 'announcement'. Health notice is broadcast information.",
+        "format": "Valid JSON object with no extra text outside the JSON",
+        "domain_relevance": "Title accurately summarises the email content",
+        "clarity": "Category choice is consistent with other health notice classifications"
+      }
+    }
+  ]
+}
