@@ -295,10 +295,11 @@ function dimAverages(mr) {
 function modelSummaries(data) {
   return data.results.map(mr => {
     const scores = mr.test_results.filter(t => t.avg_score > 0).map(t => t.avg_score);
-    const lats = []; let tokens = 0;
+    const lats = []; let tokens = 0; let cost = 0;
     mr.test_results.forEach(tr => tr.runs.forEach(r => {
       if (r.latency) lats.push(r.latency);
       tokens += (r.tokens?.input||0) + (r.tokens?.output||0);
+      cost += r.cost || 0;
     }));
     const stds = mr.test_results.filter(t => t.std_dev > 0).map(t => t.std_dev);
     return {
@@ -308,10 +309,16 @@ function modelSummaries(data) {
       max: scores.length ? +Math.max(...scores).toFixed(1) : 0,
       std: stds.length ? +(stds.reduce((a,b)=>a+b,0)/stds.length).toFixed(2) : 0,
       lat: lats.length ? +(lats.reduce((a,b)=>a+b,0)/lats.length).toFixed(1) : 0,
-      tokens, errors: mr.errors,
+      cost: +cost.toFixed(4), tokens, errors: mr.errors,
       dims: dimAverages(mr)
     };
   }).sort((a,b) => b.avg - a.avg);
+}
+
+function fmtCost(v) {
+  if (v >= 0.01) return '$' + v.toFixed(2);
+  if (v >= 0.001) return '$' + v.toFixed(3);
+  return '$' + v.toFixed(4);
 }
 
 // Group test cases by category → Map<category, tc[]>
@@ -428,7 +435,7 @@ async function renderRun(filename) {
     <table style="margin-top:16px"><thead><tr>
       <th>#</th><th>Model</th>
       <th>Score <span class="scale-note">(1–10)</span></th>
-      <th>Consistency</th><th>Avg Latency</th><th>Total Tokens</th><th>Errors</th>
+      <th>Consistency</th><th>Avg Latency</th><th>Cost</th><th>Errors</th>
     </tr></thead><tbody>`;
   summaries.forEach((m, i) => {
     html += `<tr>
@@ -437,11 +444,25 @@ async function renderRun(filename) {
       <td><span class="score ${scoreClass(m.avg)}">${m.avg}</span><span class="score-range-hint">${m.min}–${m.max} range</span></td>
       <td style="color:${stdColor(m.std)};font-weight:600">${m.std}</td>
       <td>${m.lat}s</td>
-      <td>${m.tokens.toLocaleString()}</td>
+      <td>${fmtCost(m.cost)}</td>
       <td>${m.errors > 0 ? `<span style="color:var(--red);font-weight:600">${m.errors}</span>` : '0'}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
+
+  // --- Cost vs Intelligence scatter ---
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Cost vs Intelligence</h2>
+      <div class="inline-legend">
+        <span class="key-item"><span class="dot dot-green"></span>7–10 Strong</span>
+        <span class="key-item"><span class="dot dot-amber"></span>5–6.9 Moderate</span>
+        <span class="key-item"><span class="dot dot-red"></span>&lt;5 Weak</span>
+      </div>
+    </div>
+    <div class="chart-container" style="height:340px"><canvas id="cost-scatter"></canvas></div>
+    <p style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">Higher is smarter · Left is cheaper · <span style="color:var(--green);font-weight:600">Top-left wins</span></p>
+  </div>`;
 
   // --- 3. Radar + Reliability side by side ---
   html += `<div class="chart-row">
@@ -529,6 +550,8 @@ async function renderRun(filename) {
         tcRows.sort((a,b) => b.avg - a.avg);
         const passCount = tcRows.filter(r => r.avg >= 7).length;
 
+        const tcPrompt = tc.prompt || '';
+        const tcRef = tc.reference_answer || '';
         html += `<details><summary>
           <span style="font-weight:500">${tc.test_case_name}</span>
           <span class="summary-right">
@@ -536,8 +559,10 @@ async function renderRun(filename) {
             <span class="score ${scoreClass(tcRows[0]?.avg||0)}">${tcRows[0]?.avg||0}</span>
           </span>
         </summary>
-        <div class="detail-content">
-        <table><thead><tr>
+        <div class="detail-content">`;
+        if (tcPrompt) html += `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px"><strong>Prompt:</strong> ${tcPrompt}</div>`;
+        if (tcRef) html += `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px"><strong>Expected:</strong> ${tcRef}</div>`;
+        html += `<table><thead><tr>
           <th>Model</th>
           <th>Score <span class="scale-note">(1–10)</span></th>
           <th>Std Dev</th>
@@ -622,6 +647,83 @@ async function renderRun(filename) {
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: ctx => 'Std Dev: ' + ctx.raw } }
+        }
+      }
+    });
+
+    // Cost vs Intelligence scatter
+    const costs = summaries.map(m => m.cost);
+    const scScores = summaries.map(m => m.avg);
+    const yMin = Math.max(0, Math.floor((Math.min(...scScores) - 0.5) * 2) / 2);
+    const yMax = Math.min(10, Math.ceil((Math.max(...scScores) + 0.5) * 2) / 2);
+    const xMax = +(Math.max(...costs) * 1.3).toFixed(4) || 0.01;
+
+    const costLabels = {
+      id: 'costLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta) return;
+        ctx.save();
+        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.textBaseline = 'middle';
+        meta.data.forEach((pt, i) => {
+          const d = chart.data.datasets[0].data[i];
+          if (!d || !pt) return;
+          if (chartArea.right - pt.x < 110) {
+            ctx.textAlign = 'right';
+            ctx.fillText(d.model, pt.x - 10, pt.y);
+          } else {
+            ctx.textAlign = 'left';
+            ctx.fillText(d.model, pt.x + 10, pt.y);
+          }
+        });
+        ctx.restore();
+      }
+    };
+
+    new Chart(document.getElementById('cost-scatter'), {
+      type: 'scatter',
+      plugins: [costLabels],
+      data: {
+        datasets: [{
+          label: 'Models',
+          data: summaries.map(m => ({ x: m.cost, y: m.avg, model: m.name })),
+          backgroundColor: summaries.map(m => m.avg>=7?'#22c55e':m.avg>=5?'#f59e0b':'#ef4444'),
+          borderColor: '#ffffff',
+          pointRadius: 8,
+          pointHoverRadius: 11,
+          pointBorderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 24, top: 8 } },
+        scales: {
+          x: {
+            type: 'linear', min: 0, max: xMax,
+            title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#64748b' },
+            grid: { color: '#f1f5f9' },
+            ticks: { callback: v => '$' + v.toFixed(3) }
+          },
+          y: {
+            min: yMin, max: yMax,
+            title: { display: true, text: 'Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
+            grid: { color: '#f1f5f9' },
+            ticks: { stepSize: 0.5 }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const d = ctx.raw;
+                return d.model + ': ' + d.y.toFixed(1) + '/10 at ' + fmtCost(d.x);
+              }
+            }
+          }
         }
       }
     });

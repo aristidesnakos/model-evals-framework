@@ -46,6 +46,9 @@ def generate_report(suite_path: Path, run_id: str, model_list: list, seed: int) 
     results = []
     for model in model_list:
         bias = model_biases.get(model["id"], 0.0)
+        pricing = model.get("pricing", {})
+        input_rate = pricing.get("input_per_million", 0)
+        output_rate = pricing.get("output_per_million", 0)
         test_results = []
         for tc in suite["test_cases"]:
             runs = []
@@ -58,11 +61,16 @@ def generate_report(suite_path: Path, run_id: str, model_list: list, seed: int) 
                 latency = round(rng.uniform(0.6, 3.8), 2)
                 inp_tokens = rng.randint(350, 700)
                 out_tokens = rng.randint(180, 600)
+                cost = round(
+                    (inp_tokens * input_rate + out_tokens * output_rate)
+                    / 1_000_000, 6
+                )
                 runs.append({
                     "run": run_idx,
                     "error": None,
                     "latency": latency,
                     "tokens": {"input": inp_tokens, "output": out_tokens},
+                    "cost": cost,
                     "scores": scores,
                     "weighted_score": ws,
                     "validation": {"passed": True, "failures": []},
@@ -77,6 +85,8 @@ def generate_report(suite_path: Path, run_id: str, model_list: list, seed: int) 
                 "test_case_id": tc["id"],
                 "test_case_name": tc["name"],
                 "category": tc["category"],
+                "prompt": tc["prompt"],
+                "reference_answer": tc.get("reference_answer", ""),
                 "runs": runs,
                 "avg_score": avg,
                 "std_dev": std_dev,
@@ -87,6 +97,7 @@ def generate_report(suite_path: Path, run_id: str, model_list: list, seed: int) 
         results.append({
             "model_id": model["id"],
             "model_name": model["name"],
+            "pricing": pricing,
             "test_results": test_results,
             "errors": 0,
         })
@@ -132,13 +143,14 @@ def _model_summary(model_result: dict) -> dict:
     test_results = model_result.get("test_results", [])
     scores = [tr["avg_score"] for tr in test_results if tr.get("avg_score", 0) > 0]
     stds = [tr["std_dev"] for tr in test_results if tr.get("std_dev", 0) > 0]
-    lats, tokens = [], 0
+    lats, tokens, cost = [], 0, 0.0
     for tr in test_results:
         for r in tr.get("runs", []):
             if r.get("latency"):
                 lats.append(r["latency"])
             tok = r.get("tokens") or {}
             tokens += (tok.get("input", 0) or 0) + (tok.get("output", 0) or 0)
+            cost += r.get("cost", 0)
 
     def mean(xs): return sum(xs) / len(xs) if xs else 0.0
 
@@ -148,6 +160,7 @@ def _model_summary(model_result: dict) -> dict:
         "max":    round(max(scores), 1) if scores else 0.0,
         "std":    round(mean(stds), 2) if stds else 0.0,
         "lat":    round(mean(lats), 1) if lats else 0.0,
+        "cost":   round(cost, 4),
         "tokens": tokens,
         "errors": model_result.get("errors", 0),
     }
@@ -187,6 +200,7 @@ def build_leaderboard(reports: list[tuple[str, dict]]) -> dict:
             "max":    round(max(s["max"] for s in rs), 1),
             "std":    std,
             "lat":    lat,
+            "cost":   round(sum(s["cost"] for s in rs), 4),
             "tokens": sum(s["tokens"] for s in rs),
             "errors": sum(s["errors"] for s in rs),
             "runCount": len(rs),
@@ -223,15 +237,61 @@ def build_leaderboard(reports: list[tuple[str, dict]]) -> dict:
     }
 
 
+def _backfill_report(data: dict, models_data: dict) -> None:
+    """Add cost and prompt fields to reports that predate those features."""
+    pricing_map = {
+        m["id"]: m.get("pricing", {})
+        for m in models_data.get("models", [])
+    }
+
+    # Load suite to get prompts and reference answers
+    suite_name = data.get("suite_name", "")
+    suite_dir = ROOT / "evals"
+    tc_map = {}
+    for candidate in [suite_dir / f"{suite_name}.json", suite_dir / "suite.json"]:
+        if candidate.exists():
+            suite = json.loads(candidate.read_text())
+            tc_map = {
+                tc["id"]: tc for tc in suite.get("test_cases", [])
+            }
+            break
+
+    for mr in data.get("results", []):
+        if "pricing" not in mr:
+            mr["pricing"] = pricing_map.get(mr["model_id"], {})
+        p = mr["pricing"]
+        in_rate = p.get("input_per_million", 0)
+        out_rate = p.get("output_per_million", 0)
+        for tr in mr.get("test_results", []):
+            # Backfill prompt and reference_answer
+            if "prompt" not in tr:
+                tc = tc_map.get(tr.get("test_case_id", ""), {})
+                tr["prompt"] = tc.get("prompt", "")
+                tr["reference_answer"] = tc.get(
+                    "reference_answer", ""
+                )
+            # Backfill cost
+            for run in tr.get("runs", []):
+                if "cost" not in run:
+                    tok = run.get("tokens") or {}
+                    run["cost"] = round(
+                        (tok.get("input", 0) * in_rate
+                         + tok.get("output", 0) * out_rate)
+                        / 1_000_000, 6
+                    )
+
+
 def from_real_reports(reports_dir: Path) -> bool:
     files = sorted(reports_dir.glob("*.json"), reverse=True)
     if not files:
         return False
 
+    models_data = json.loads((ROOT / "models.json").read_text())
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     pairs = []
     for f in files[:4]:  # cap at 4 reports for the demo
         data = json.loads(f.read_text())
+        _backfill_report(data, models_data)
         dest = OUT_DIR / f.name
         dest.write_text(json.dumps(data, indent=2))
         pairs.append((f.name, data))

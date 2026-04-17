@@ -222,10 +222,11 @@ function dimAverages(mr) {
 function modelSummaries(data) {
   return data.results.map(mr => {
     const scores = mr.test_results.filter(t => t.avg_score > 0).map(t => t.avg_score);
-    const lats = []; let tokens = 0;
+    const lats = []; let tokens = 0; let cost = 0;
     mr.test_results.forEach(tr => tr.runs.forEach(r => {
       if (r.latency) lats.push(r.latency);
       tokens += (r.tokens?.input||0) + (r.tokens?.output||0);
+      cost += r.cost || 0;
     }));
     const stds = mr.test_results.filter(t => t.std_dev > 0).map(t => t.std_dev);
     return {
@@ -235,10 +236,16 @@ function modelSummaries(data) {
       max: scores.length ? +Math.max(...scores).toFixed(1) : 0,
       std: stds.length ? +(stds.reduce((a,b)=>a+b,0)/stds.length).toFixed(2) : 0,
       lat: lats.length ? +(lats.reduce((a,b)=>a+b,0)/lats.length).toFixed(1) : 0,
-      tokens, errors: mr.errors,
+      cost: +cost.toFixed(4), tokens, errors: mr.errors,
       dims: dimAverages(mr)
     };
   }).sort((a,b) => b.avg - a.avg);
+}
+
+function fmtCost(v) {
+  if (v >= 0.01) return '$' + v.toFixed(2);
+  if (v >= 0.001) return '$' + v.toFixed(3);
+  return '$' + v.toFixed(4);
 }
 
 function groupByCategory(testCases) {
@@ -315,6 +322,20 @@ async function renderLeaderboard() {
   }
   html += `</div>`;
 
+  // Cost vs Intelligence scatter
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Cost vs Intelligence</h2>
+      <div class="inline-legend">
+        <span class="key-item"><span class="dot dot-green"></span>7\u201310 Strong</span>
+        <span class="key-item"><span class="dot dot-amber"></span>5\u20136.9 Moderate</span>
+        <span class="key-item"><span class="dot dot-red"></span>&lt;5 Weak</span>
+      </div>
+    </div>
+    <div class="scatter-container"><canvas id="cost-scatter"></canvas></div>
+    <p class="scatter-caption">Higher is smarter \u00b7 Left is cheaper \u00b7 <span class="up-right">Top-left wins</span></p>
+  </div>`;
+
   // Unified leaderboard table
   html += `<div class="card">
     <div class="section-header">
@@ -329,7 +350,7 @@ async function renderLeaderboard() {
       <th>Avg Latency</th>
       <th>Production</th>
       <th>Runs</th>
-      <th>Total Tokens</th>
+      <th>Cost</th>
     </tr></thead><tbody>`;
   aggregated.forEach((m, i) => {
     const viable = m.productionViable
@@ -345,7 +366,7 @@ async function renderLeaderboard() {
       <td style="font-variant-numeric:tabular-nums">${m.lat}s</td>
       <td>${viable}</td>
       <td><span class="badge badge-runs">${m.runCount}&times;</span></td>
-      <td style="font-variant-numeric:tabular-nums">${m.tokens.toLocaleString()}</td>
+      <td style="font-variant-numeric:tabular-nums">${fmtCost(m.cost || 0)}</td>
     </tr>`;
   });
   html += `</tbody></table></div>`;
@@ -464,6 +485,88 @@ async function renderLeaderboard() {
       }
     }
   });
+
+  // Cost vs Intelligence scatter
+  const costData = aggregated.filter(m => m.cost > 0);
+  if (costData.length) {
+    const cScores = costData.map(m => m.avg);
+    const cCosts = costData.map(m => m.cost);
+    const cyMin = Math.max(0, Math.floor((Math.min(...cScores) - 0.5) * 2) / 2);
+    const cyMax = Math.min(10, Math.ceil((Math.max(...cScores) + 0.5) * 2) / 2);
+    const cxMax = +(Math.max(...cCosts) * 1.3).toFixed(4) || 0.01;
+
+    const costPointColor = m => m.avg >= 7 ? '#22c55e' : m.avg >= 5 ? '#f59e0b' : '#ef4444';
+
+    const costScatterLabels = {
+      id: 'costScatterLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta) return;
+        ctx.save();
+        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#1e293b';
+        ctx.textBaseline = 'middle';
+        meta.data.forEach((pt, i) => {
+          const d = chart.data.datasets[0].data[i];
+          if (!d || !pt) return;
+          if (chartArea.right - pt.x < 110) {
+            ctx.textAlign = 'right';
+            ctx.fillText(d.model, pt.x - 10, pt.y);
+          } else {
+            ctx.textAlign = 'left';
+            ctx.fillText(d.model, pt.x + 10, pt.y);
+          }
+        });
+        ctx.restore();
+      }
+    };
+
+    new Chart(document.getElementById('cost-scatter'), {
+      type: 'scatter',
+      plugins: [costScatterLabels],
+      data: {
+        datasets: [{
+          label: 'Models',
+          data: costData.map(m => ({ x: m.cost, y: m.avg, model: m.name })),
+          backgroundColor: costData.map(costPointColor),
+          borderColor: '#ffffff',
+          pointRadius: 8,
+          pointHoverRadius: 11,
+          pointBorderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 24, top: 8 } },
+        scales: {
+          x: {
+            type: 'linear', min: 0, max: cxMax,
+            title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#64748b' },
+            grid: { color: '#f1f5f9' },
+            ticks: { callback: v => '$' + v.toFixed(3) }
+          },
+          y: {
+            min: cyMin, max: cyMax,
+            title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
+            grid: { color: '#f1f5f9' },
+            ticks: { stepSize: 0.5 }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const d = ctx.raw;
+                return d.model + ': ' + d.y.toFixed(1) + '/10 at ' + fmtCost(d.x);
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 async function renderRunsList() {
@@ -567,7 +670,7 @@ async function renderRun(filename) {
     <table style="margin-top:16px"><thead><tr>
       <th>#</th><th>Model</th>
       <th>Score <span class="scale-note">(1\u201310)</span></th>
-      <th>Consistency</th><th>Avg Latency</th><th>Total Tokens</th><th>Errors</th>
+      <th>Consistency</th><th>Avg Latency</th><th>Cost</th><th>Errors</th>
     </tr></thead><tbody>`;
   summaries.forEach((m, i) => {
     html += `<tr>
@@ -576,11 +679,25 @@ async function renderRun(filename) {
       <td><span class="score ${scoreClass(m.avg)}">${m.avg}</span><span class="score-range-hint">${m.min}\u2013${m.max} range</span></td>
       <td style="color:${stdColor(m.std)};font-weight:600">${m.std}</td>
       <td>${m.lat}s</td>
-      <td>${m.tokens.toLocaleString()}</td>
+      <td>${fmtCost(m.cost)}</td>
       <td>${m.errors > 0 ? `<span style="color:var(--red);font-weight:600">${m.errors}</span>` : '0'}</td>
     </tr>`;
   });
   html += '</tbody></table></div>';
+
+  // Cost vs Intelligence scatter
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Cost vs Intelligence</h2>
+      <div class="inline-legend">
+        <span class="key-item"><span class="dot dot-green"></span>7\u201310 Strong</span>
+        <span class="key-item"><span class="dot dot-amber"></span>5\u20136.9 Moderate</span>
+        <span class="key-item"><span class="dot dot-red"></span>&lt;5 Weak</span>
+      </div>
+    </div>
+    <div class="scatter-container"><canvas id="run-cost-scatter"></canvas></div>
+    <p class="scatter-caption">Higher is smarter \u00b7 Left is cheaper \u00b7 <span class="up-right">Top-left wins</span></p>
+  </div>`;
 
   // 3. Radar + Reliability
   html += `<div class="chart-row">
@@ -666,6 +783,8 @@ async function renderRun(filename) {
         tcRows.sort((a,b) => b.avg - a.avg);
         const passCount = tcRows.filter(r => r.avg >= 7).length;
 
+        const tcPrompt = tc.prompt || '';
+        const tcRef = tc.reference_answer || '';
         html += `<details><summary>
           <span style="font-weight:500">${tc.test_case_name}</span>
           <span class="summary-right">
@@ -673,8 +792,10 @@ async function renderRun(filename) {
             <span class="score ${scoreClass(tcRows[0]?.avg||0)}">${tcRows[0]?.avg||0}</span>
           </span>
         </summary>
-        <div class="detail-content">
-        <table><thead><tr>
+        <div class="detail-content">`;
+        if (tcPrompt) html += `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px"><strong>Prompt:</strong> ${tcPrompt}</div>`;
+        if (tcRef) html += `<div style="margin-bottom:10px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px"><strong>Expected:</strong> ${tcRef}</div>`;
+        html += `<table><thead><tr>
           <th>Model</th>
           <th>Score <span class="scale-note">(1\u201310)</span></th>
           <th>Std Dev</th>
@@ -762,6 +883,62 @@ async function renderRun(filename) {
         }
       }
     });
+
+    // Cost vs Intelligence scatter (run detail)
+    const rcCosts = summaries.map(m => m.cost);
+    if (rcCosts.some(c => c > 0)) {
+      const rcScores = summaries.map(m => m.avg);
+      const rcyMin = Math.max(0, Math.floor((Math.min(...rcScores) - 0.5) * 2) / 2);
+      const rcyMax = Math.min(10, Math.ceil((Math.max(...rcScores) + 0.5) * 2) / 2);
+      const rcxMax = +(Math.max(...rcCosts) * 1.3).toFixed(4) || 0.01;
+      const rcLabels = {
+        id: 'rcLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx, chartArea } = chart;
+          const meta = chart.getDatasetMeta(0);
+          if (!meta) return;
+          ctx.save();
+          ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.fillStyle = '#1e293b';
+          ctx.textBaseline = 'middle';
+          meta.data.forEach((pt, i) => {
+            const d = chart.data.datasets[0].data[i];
+            if (!d || !pt) return;
+            if (chartArea.right - pt.x < 110) { ctx.textAlign = 'right'; ctx.fillText(d.model, pt.x - 10, pt.y); }
+            else { ctx.textAlign = 'left'; ctx.fillText(d.model, pt.x + 10, pt.y); }
+          });
+          ctx.restore();
+        }
+      };
+      new Chart(document.getElementById('run-cost-scatter'), {
+        type: 'scatter',
+        plugins: [rcLabels],
+        data: {
+          datasets: [{
+            label: 'Models',
+            data: summaries.map(m => ({ x: m.cost, y: m.avg, model: m.name })),
+            backgroundColor: summaries.map(m => m.avg>=7?'#22c55e':m.avg>=5?'#f59e0b':'#ef4444'),
+            borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 11, pointBorderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          layout: { padding: { right: 24, top: 8 } },
+          scales: {
+            x: { type: 'linear', min: 0, max: rcxMax,
+              title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#64748b' },
+              grid: { color: '#f1f5f9' }, ticks: { callback: v => '$' + v.toFixed(3) } },
+            y: { min: rcyMin, max: rcyMax,
+              title: { display: true, text: 'Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
+              grid: { color: '#f1f5f9' }, ticks: { stepSize: 0.5 } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => { const d = ctx.raw; return d.model + ': ' + d.y.toFixed(1) + '/10 at ' + fmtCost(d.x); } } }
+          }
+        }
+      });
+    }
   }
 }
 
