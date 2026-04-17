@@ -90,6 +90,8 @@ def check_for_new_models(api_key: str, auto_enable: bool = False) -> dict:
     for model in matching:
         if model["id"] not in known_ids:
             pricing = model.get("pricing", {})
+            arch = model.get("architecture", {})
+            input_modalities = arch.get("input_modalities", [])
             entry = {
                 "id": model["id"],
                 "name": model.get("name", model["id"]),
@@ -103,6 +105,7 @@ def check_for_new_models(api_key: str, auto_enable: bool = False) -> dict:
                         float(pricing.get("completion", "0")) * 1_000_000, 4
                     ),
                 },
+                "vision": "image" in input_modalities,
                 "added": datetime.now(timezone.utc).isoformat(),
             }
             new_models.append(entry)

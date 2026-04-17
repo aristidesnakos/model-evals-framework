@@ -33,6 +33,8 @@ GITHUB_ISSUES = "https://github.com/aristidesnakos/model-evals-framework/issues"
 def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str) -> None:
     """Run one test case against one model for pipeline verification."""
     from openai import OpenAI
+    from evaluator import EVALS_DIR
+    from color_scoring import extract_hex_codes, score_palette
 
     suite = load_suite(suite_name)
     weights = suite["scoring_weights"]
@@ -44,8 +46,27 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
         print("Error: No enabled models in models.json")
         sys.exit(1)
 
-    model = enabled[0]
-    tc = test_cases[0]
+    # Vision-aware selection: if any test case needs an image, require a
+    # vision-capable enabled model and pick the first vision test case.
+    suite_needs_vision = any(tc.get("image_path") for tc in test_cases)
+    if suite_needs_vision:
+        vision_enabled = [m for m in enabled if m.get("vision")]
+        if not vision_enabled:
+            print(
+                f"Error: Suite '{suite_name}' requires a vision-capable model, "
+                f"but none are enabled.\n"
+                f"Hint: Set \"vision\": true on a multimodal model in models.json "
+                f"and enable it."
+            )
+            sys.exit(1)
+        model = vision_enabled[0]
+        tc = next(t for t in test_cases if t.get("image_path"))
+    else:
+        model = enabled[0]
+        tc = test_cases[0]
+
+    image_path = (EVALS_DIR / tc["image_path"]) if tc.get("image_path") else None
+    expected_colors = tc.get("expected_colors")
 
     print()
     print("DRY RUN -- verifying pipeline with 1 test case, 1 model, 1 iteration")
@@ -53,12 +74,14 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
     print(f"Model: {model.get('name', model['id'])} ({model['id']})")
     print(f"Test:  {tc['name']} ({tc['id']})")
     print(f"Suite: {suite['suite_name']}")
+    if image_path is not None:
+        print(f"Image: {image_path} ({'exists' if image_path.exists() else 'MISSING'})")
 
     client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
 
     # Call model
     print("\nCalling model...", end=" ", flush=True)
-    result = call_model(client, model["id"], tc["prompt"])
+    result = call_model(client, model["id"], tc["prompt"], image_path=image_path)
 
     if result["error"]:
         print(f"FAILED")
@@ -89,12 +112,28 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
         print("Consider adjusting your validation rules if this was unexpected.")
         sys.exit(1)
 
+    # Deterministic color scoring (if applicable)
+    color_match = None
+    if expected_colors:
+        extracted = extract_hex_codes(output)
+        color_match = score_palette(
+            expected_colors, extracted,
+            tolerance=tc.get("color_tolerance", 10.0),
+        )
+        print(
+            f"\nColor match: {color_match['matched_count']}/"
+            f"{color_match['expected_count']} within ΔE ≤ {color_match['tolerance']} "
+            f"| mean ΔE: {color_match.get('mean_delta_e', 'n/a')} "
+            f"| extracted: {color_match['extracted_count']}"
+        )
+
     # Judge
     for i, jm in enumerate(judge_models, 1):
         print(f"\nJudge {i} ({jm['id']})...", end=" ", flush=True)
         judge_result = judge_output(
             client, jm["id"], tc, output,
             suite_description=suite_description,
+            color_match=color_match,
         )
         if judge_result["error"]:
             print(f"FAILED: {judge_result['error']}")

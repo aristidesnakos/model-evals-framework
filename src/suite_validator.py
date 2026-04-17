@@ -4,9 +4,13 @@ Catches structural errors and warns about potential issues.
 """
 
 import json
+import re
 from pathlib import Path
 
 EVALS_DIR = Path(__file__).parent.parent / "evals"
+
+_SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+_HEX_COLOR_RE = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 
 class ValidationResult:
@@ -136,6 +140,67 @@ def validate_suite(suite_name: str) -> ValidationResult:
             result.errors.append(
                 f"Test case '{label}': min_length must be a positive integer, got {min_length}"
             )
+
+        # Vision / color-palette specific fields (only when image_path is set)
+        if "image_path" in tc:
+            image_path_raw = tc.get("image_path")
+            if not isinstance(image_path_raw, str) or not image_path_raw.strip():
+                result.errors.append(
+                    f"Test case '{label}': 'image_path' must be a non-empty string "
+                    f"relative to evals/ (e.g. 'assets/color_palette/sunset.png')"
+                )
+            else:
+                image_file = EVALS_DIR / image_path_raw
+                suffix = image_file.suffix.lower()
+                if suffix not in _SUPPORTED_IMAGE_SUFFIXES:
+                    result.errors.append(
+                        f"Test case '{label}': image '{image_path_raw}' has "
+                        f"unsupported extension '{suffix}'. "
+                        f"Supported: {sorted(_SUPPORTED_IMAGE_SUFFIXES)}"
+                    )
+                elif not image_file.exists():
+                    result.errors.append(
+                        f"Test case '{label}': image file not found at {image_file}. "
+                        f"Drop the file into evals/{image_path_raw.rsplit('/', 1)[0] if '/' in image_path_raw else ''}."
+                    )
+
+            expected_colors = tc.get("expected_colors")
+            if not isinstance(expected_colors, list) or not expected_colors:
+                result.errors.append(
+                    f"Test case '{label}': vision test cases must declare "
+                    f"'expected_colors' as a non-empty list of hex codes "
+                    f"(e.g. [\"#ff0000\", \"#00ff00\"])"
+                )
+            else:
+                for idx, code in enumerate(expected_colors):
+                    if not isinstance(code, str) or not _HEX_COLOR_RE.match(code.strip()):
+                        result.errors.append(
+                            f"Test case '{label}': expected_colors[{idx}] = "
+                            f"{code!r} is not a valid hex color "
+                            f"(expected '#rrggbb' or '#rgb')"
+                        )
+
+            tol = tc.get("color_tolerance")
+            if tol is not None:
+                if not isinstance(tol, (int, float)) or tol < 0 or tol > 100:
+                    result.errors.append(
+                        f"Test case '{label}': color_tolerance must be a number "
+                        f"in [0, 100] (CIEDE2000 units), got {tol!r}"
+                    )
+                elif tol > 25:
+                    result.warnings.append(
+                        f"Test case '{label}': color_tolerance={tol} is very "
+                        f"permissive — most wrong colors will still match"
+                    )
+
+            if isinstance(validation, dict):
+                ml = validation.get("min_length")
+                if isinstance(ml, int) and ml > 200:
+                    result.warnings.append(
+                        f"Test case '{label}': min_length={ml} is large for a "
+                        f"vision/JSON test case — models typically return short "
+                        f"hex arrays and may over-reject"
+                    )
 
         # Missing optional fields that improve judge quality
         if "reference_answer" not in tc:

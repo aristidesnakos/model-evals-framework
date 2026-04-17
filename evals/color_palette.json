@@ -1,0 +1,56 @@
+{
+  "suite_name": "color_palette",
+  "description": "Multimodal color-perception eval: given an image, extract its dominant color palette as hex codes. Accuracy is measured deterministically via CIEDE2000 delta-E against ground-truth hex values and fed into the judge prompt as objective context; judges still score the five standard dimensions. Requires vision-capable models (set \"vision\": true on the model entry in models.json).",
+  "runs_per_test": 1,
+  "scoring_weights": {
+    "completeness": 0.25,
+    "accuracy": 0.40,
+    "format": 0.15,
+    "domain_relevance": 0.10,
+    "clarity": 0.10
+  },
+  "test_cases": [
+    {
+      "id": "cp_001",
+      "name": "PLACEHOLDER — replace with your first image",
+      "category": "color_extraction",
+      "image_path": "assets/color_palette/cp_001.png",
+      "expected_colors": ["#000000", "#ffffff"],
+      "color_tolerance": 10.0,
+      "prompt": "Look at the image and extract its 4-6 most dominant colors. Return ONLY a JSON array of hex codes in descending order of visual dominance, nothing else. Example: [\"#aabbcc\", \"#112233\", \"#ddeeff\"]",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["#"]
+      },
+      "reference_answer": "A JSON array of 4-6 hex codes matching the dominant colors in the image. Ground-truth hex codes are listed in expected_colors; the color-matching block in the judge prompt will show CIEDE2000 deltas against them.",
+      "scoring_criteria": {
+        "completeness": "All dominant ground-truth colors are represented in the output (see the Color Matching section: 1 missing = penalty)",
+        "accuracy": "Extracted hex codes are perceptually close to the ground truth (primary signal: the CIEDE2000 table in the judge prompt)",
+        "format": "Pure JSON array of hex strings, no prose, no code fences, no trailing commas",
+        "domain_relevance": "Colors actually present in the image, not generic web-palette defaults",
+        "clarity": "Output is a valid, parseable JSON array"
+      }
+    },
+    {
+      "id": "cp_002",
+      "name": "PLACEHOLDER — replace with your second image",
+      "category": "color_extraction",
+      "image_path": "assets/color_palette/cp_002.png",
+      "expected_colors": ["#000000", "#ffffff"],
+      "color_tolerance": 10.0,
+      "prompt": "Look at the image and extract its 4-6 most dominant colors. Return ONLY a JSON array of hex codes in descending order of visual dominance, nothing else. Example: [\"#aabbcc\", \"#112233\", \"#ddeeff\"]",
+      "expected_format": "json",
+      "validation": {
+        "must_contain": ["#"]
+      },
+      "reference_answer": "A JSON array of 4-6 hex codes matching the dominant colors in the image.",
+      "scoring_criteria": {
+        "completeness": "All dominant ground-truth colors are represented in the output",
+        "accuracy": "Extracted hex codes are perceptually close to the ground truth (primary signal: the CIEDE2000 table in the judge prompt)",
+        "format": "Pure JSON array of hex strings, no prose",
+        "domain_relevance": "Colors actually present in the image, not generic web-palette defaults",
+        "clarity": "Output is a valid, parseable JSON array"
+      }
+    }
+  ]
+}
