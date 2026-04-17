@@ -123,6 +123,106 @@ def build_index(reports: list[tuple[str, dict]]) -> list:
     return index
 
 
+# Production-viability latency cutoff (seconds). Keep in sync with the frontend constant.
+PRODUCTION_LATENCY_CUTOFF = 15
+
+
+def _model_summary(model_result: dict) -> dict:
+    """Per-model summary for a single run. Mirrors modelSummaries() in site/demo/index.html."""
+    test_results = model_result.get("test_results", [])
+    scores = [tr["avg_score"] for tr in test_results if tr.get("avg_score", 0) > 0]
+    stds = [tr["std_dev"] for tr in test_results if tr.get("std_dev", 0) > 0]
+    lats, tokens = [], 0
+    for tr in test_results:
+        for r in tr.get("runs", []):
+            if r.get("latency"):
+                lats.append(r["latency"])
+            tok = r.get("tokens") or {}
+            tokens += (tok.get("input", 0) or 0) + (tok.get("output", 0) or 0)
+
+    def mean(xs): return sum(xs) / len(xs) if xs else 0.0
+
+    return {
+        "avg":    round(mean(scores), 1) if scores else 0.0,
+        "min":    round(min(scores), 1) if scores else 0.0,
+        "max":    round(max(scores), 1) if scores else 0.0,
+        "std":    round(mean(stds), 2) if stds else 0.0,
+        "lat":    round(mean(lats), 1) if lats else 0.0,
+        "tokens": tokens,
+        "errors": model_result.get("errors", 0),
+    }
+
+
+def build_leaderboard(reports: list[tuple[str, dict]]) -> dict:
+    """
+    Materialize the cross-run leaderboard at build time.
+
+    For models that appear in multiple runs, scalar metrics are averaged across
+    runs (mean-of-means), tokens and errors are summed, and min/max are taken
+    as the extremes across runs. Preserves the exact semantics of the prior
+    client-side aggregateAllRuns() function so we can delete it.
+    """
+    model_map: dict[str, dict] = {}
+    for _, data in reports:
+        for mr in data.get("results", []):
+            mid = mr["model_id"]
+            summary = _model_summary(mr)
+            if mid not in model_map:
+                model_map[mid] = {"id": mid, "name": mr["model_name"], "runs": []}
+            model_map[mid]["runs"].append({"runId": data.get("run_id", ""), "summary": summary})
+
+    def mean(xs): return sum(xs) / len(xs) if xs else 0.0
+
+    aggregated = []
+    for entry in model_map.values():
+        rs = [r["summary"] for r in entry["runs"]]
+        avg = round(mean([s["avg"] for s in rs]), 2)
+        lat = round(mean([s["lat"] for s in rs]), 1)
+        std = round(mean([s["std"] for s in rs]), 2)
+        aggregated.append({
+            "id":     entry["id"],
+            "name":   entry["name"],
+            "avg":    avg,
+            "min":    round(min(s["min"] for s in rs), 1),
+            "max":    round(max(s["max"] for s in rs), 1),
+            "std":    std,
+            "lat":    lat,
+            "tokens": sum(s["tokens"] for s in rs),
+            "errors": sum(s["errors"] for s in rs),
+            "runCount": len(rs),
+            "runIds":   [r["runId"] for r in entry["runs"]],
+            "productionViable": lat <= PRODUCTION_LATENCY_CUTOFF,
+        })
+    aggregated.sort(key=lambda m: m["avg"], reverse=True)
+
+    # Calibration: models appearing in >1 run — small deltas confirm runs are comparable.
+    calibration = []
+    for entry in model_map.values():
+        if len(entry["runs"]) >= 2:
+            avgs = [r["summary"]["avg"] for r in entry["runs"]]
+            calibration.append({
+                "name": entry["name"],
+                "delta": round(max(avgs) - min(avgs), 2),
+                "runCount": len(entry["runs"]),
+            })
+    calibration.sort(key=lambda c: c["delta"])
+
+    # Test-case count: read from first report's first model (matches prior JS).
+    test_case_count = 0
+    if reports:
+        first_results = reports[0][1].get("results", [])
+        if first_results:
+            test_case_count = len(first_results[0].get("test_results", []))
+
+    return {
+        "aggregated":    aggregated,
+        "calibration":   calibration,
+        "reportCount":   len(reports),
+        "testCaseCount": test_case_count,
+        "productionLatencyCutoff": PRODUCTION_LATENCY_CUTOFF,
+    }
+
+
 def from_real_reports(reports_dir: Path) -> bool:
     files = sorted(reports_dir.glob("*.json"), reverse=True)
     if not files:
@@ -140,6 +240,11 @@ def from_real_reports(reports_dir: Path) -> bool:
     index = build_index(pairs)
     (OUT_DIR / "index.json").write_text(json.dumps(index, indent=2))
     print(f"  Wrote index.json ({len(index)} entries)")
+
+    leaderboard = build_leaderboard(pairs)
+    (OUT_DIR / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2))
+    print(f"  Wrote leaderboard.json ({len(leaderboard['aggregated'])} models, "
+          f"{len(leaderboard['calibration'])} cross-run calibrations)")
     return True
 
 
@@ -178,6 +283,11 @@ def main():
     index = build_index(pairs_sorted)
     (OUT_DIR / "index.json").write_text(json.dumps(index, indent=2))
     print(f"  Wrote index.json ({len(index)} entries)")
+
+    leaderboard = build_leaderboard(pairs_sorted)
+    (OUT_DIR / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2))
+    print(f"  Wrote leaderboard.json ({len(leaderboard['aggregated'])} models, "
+          f"{len(leaderboard['calibration'])} cross-run calibrations)")
     print(f"\nDemo data ready in {OUT_DIR.relative_to(ROOT)}/")
 
 

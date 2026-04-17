@@ -26,5 +26,19 @@
       7.0,
       8.1
     ]
+  },
+  {
+    "filename": "school_classifier_20260416_195602.json",
+    "run_id": "20260416_195602",
+    "suite_name": "school_classifier",
+    "model_count": 5,
+    "top_model": {
+      "name": "GPT-5.4 Mini",
+      "avg": 10.0
+    },
+    "score_range": [
+      10.0,
+      10.0
+    ]
   }
 ]
