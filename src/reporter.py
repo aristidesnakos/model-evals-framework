@@ -30,8 +30,8 @@ def generate_report(eval_results: dict) -> str:
     # --- Summary table ---
     lines.append("## Summary")
     lines.append("")
-    lines.append("| Model | Avg Score | Min | Max | Std Dev | Avg Latency | Total Tokens | Errors |")
-    lines.append("|-------|-----------|-----|-----|---------|-------------|-------------|--------|")
+    lines.append("| Model | Avg Score | Min | Max | Std Dev | Avg Latency | Cost | Total Tokens | Errors |")
+    lines.append("|-------|-----------|-----|-----|---------|-------------|------|-------------|--------|")
 
     model_summaries = []
     for model_result in results:
@@ -47,12 +47,14 @@ def generate_report(eval_results: dict) -> str:
         errors = model_result["errors"]
         skipped_tests = sum(1 for tr in test_results if tr.get("skipped"))
 
+        total_cost = 0.0
         for tr in test_results:
             for run in tr["runs"]:
                 if run.get("latency"):
                     all_latencies.append(run["latency"])
                 tokens = run.get("tokens", {})
                 total_tokens += tokens.get("input", 0) + tokens.get("output", 0)
+                total_cost += run.get("cost", 0)
 
         avg_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
         min_score = min(all_scores) if all_scores else 0
@@ -69,6 +71,7 @@ def generate_report(eval_results: dict) -> str:
             "max_score": max_score,
             "avg_std": avg_std,
             "avg_latency": avg_lat,
+            "total_cost": round(total_cost, 4),
             "total_tokens": total_tokens,
             "errors": errors,
             "skipped_tests": skipped_tests,
@@ -83,10 +86,13 @@ def generate_report(eval_results: dict) -> str:
             if ms.get("skipped_tests")
             else str(ms["errors"])
         )
+        cost_str = f"${ms['total_cost']:.4f}"
         lines.append(
-            f"| {ms['model_name']} | {ms['avg_score']}/10 | {ms['min_score']} | "
-            f"{ms['max_score']} | {ms['avg_std']} | {ms['avg_latency']}s | "
-            f"{ms['total_tokens']:,} | {errors_cell} |"
+            f"| {ms['model_name']} | {ms['avg_score']}/10 "
+            f"| {ms['min_score']} | {ms['max_score']} "
+            f"| {ms['avg_std']} | {ms['avg_latency']}s "
+            f"| {cost_str} | {ms['total_tokens']:,} "
+            f"| {errors_cell} |"
         )
 
     lines.append("")

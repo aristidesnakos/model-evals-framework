@@ -307,10 +307,14 @@ def run_evaluation(
 
     for model in enabled_models:
         model_id = model["id"]
+        pricing = model.get("pricing", {})
+        input_cost_per_million = pricing.get("input_per_million", 0)
+        output_cost_per_million = pricing.get("output_per_million", 0)
         print(f"\nEvaluating: {model_id}")
         model_results = {
             "model_id": model_id,
             "model_name": model.get("name", model_id),
+            "pricing": pricing,
             "test_results": [],
             "errors": 0,
         }
@@ -344,6 +348,8 @@ def run_evaluation(
                     "test_case_id": tc["id"],
                     "test_case_name": tc["name"],
                     "category": tc["category"],
+                    "prompt": tc["prompt"],
+                    "reference_answer": tc.get("reference_answer", ""),
                     "runs": tc_runs,
                     "avg_score": None,
                     "std_dev": 0.0,
@@ -360,12 +366,22 @@ def run_evaluation(
                     client, model_id, tc["prompt"], image_path=tc_image_path
                 )
 
+                # Compute cost for this call
+                run_tokens = result["tokens"]
+                run_cost = round(
+                    (run_tokens["input"] * input_cost_per_million
+                     + run_tokens["output"] * output_cost_per_million) / 1_000_000,
+                    6,
+                )
+
                 if result["error"]:
                     model_results["errors"] += 1
                     tc_runs.append({
                         "run": run_idx,
                         "error": result["error"],
                         "latency": result["latency"],
+                        "tokens": run_tokens,
+                        "cost": run_cost,
                         "scores": None,
                         "weighted_score": 0,
                         "validation": {"passed": False, "failures": ["Model call failed"]},
@@ -382,7 +398,8 @@ def run_evaluation(
                         "run": run_idx,
                         "error": None,
                         "latency": result["latency"],
-                        "tokens": result["tokens"],
+                        "tokens": run_tokens,
+                        "cost": run_cost,
                         "scores": None,
                         "weighted_score": 0,
                         "validation": validation,
@@ -415,7 +432,8 @@ def run_evaluation(
                         "run": run_idx,
                         "error": "All judges failed",
                         "latency": result["latency"],
-                        "tokens": result["tokens"],
+                        "tokens": run_tokens,
+                        "cost": run_cost,
                         "scores": None,
                         "weighted_score": 0,
                         "validation": validation,
@@ -435,7 +453,8 @@ def run_evaluation(
                     "run": run_idx,
                     "error": None,
                     "latency": result["latency"],
-                    "tokens": result["tokens"],
+                    "tokens": run_tokens,
+                    "cost": run_cost,
                     "scores": avg_scores,
                     "weighted_score": weighted,
                     "validation": validation,
@@ -469,6 +488,8 @@ def run_evaluation(
                 "test_case_id": tc["id"],
                 "test_case_name": tc["name"],
                 "category": tc["category"],
+                "prompt": tc["prompt"],
+                "reference_answer": tc.get("reference_answer", ""),
                 "runs": tc_runs,
                 "avg_score": avg_score,
                 "std_dev": std_dev,
