@@ -5,3 +5,6 @@ __pycache__/
 
 # Local documentation — not pushed to repo
 IMPLEMENTATION_SUMMARY.md
+
+/docs/improvements/*
+*.DS_Store

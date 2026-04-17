@@ -251,57 +251,15 @@ function groupByCategory(testCases) {
   return map;
 }
 
-// Production-viability latency cutoff (seconds). Models above this are flagged as unsuitable for latency-sensitive production workloads.
+// Production-viability latency cutoff (seconds). Kept in sync with build-time constant in scripts/generate_demo_data.py.
 const PRODUCTION_LATENCY_CUTOFF = 15;
 
-// Aggregate all runs in the manifest into a unified per-model summary.
-// For models that appear in multiple runs, values are averaged across those runs.
-async function aggregateAllRuns() {
-  const reports = await fetchList();
-  const allData = await Promise.all(reports.map(r => fetchReport(r.filename)));
-
-  // model_id -> { id, name, runs: [{runId, summary}] }
-  const modelMap = new Map();
-  allData.forEach(data => {
-    modelSummaries(data).forEach(s => {
-      if (!modelMap.has(s.id)) modelMap.set(s.id, { id: s.id, name: s.name, runs: [] });
-      modelMap.get(s.id).runs.push({ runId: data.run_id, suite: data.suite_name, summary: s });
-    });
-  });
-
-  const aggregated = [];
-  modelMap.forEach(entry => {
-    const rs = entry.runs;
-    const mean = arr => arr.reduce((a,b)=>a+b,0) / arr.length;
-    const avg  = +mean(rs.map(r => r.summary.avg)).toFixed(2);
-    const lat  = +mean(rs.map(r => r.summary.lat)).toFixed(1);
-    const std  = +mean(rs.map(r => r.summary.std)).toFixed(2);
-    const tokens = rs.reduce((a,b) => a + b.summary.tokens, 0);
-    const errors = rs.reduce((a,b) => a + b.summary.errors, 0);
-    aggregated.push({
-      id: entry.id,
-      name: entry.name,
-      avg, lat, std, tokens, errors,
-      min: +Math.min(...rs.map(r => r.summary.min)).toFixed(1),
-      max: +Math.max(...rs.map(r => r.summary.max)).toFixed(1),
-      runCount: rs.length,
-      runIds: rs.map(r => r.runId),
-      productionViable: lat <= PRODUCTION_LATENCY_CUTOFF,
-    });
-  });
-
-  // Calibration: shared models (appearing in >1 run) let us verify runs are comparable.
-  const calibration = [];
-  modelMap.forEach(entry => {
-    if (entry.runs.length >= 2) {
-      const scores = entry.runs.map(r => r.summary.avg);
-      const delta = +(Math.max(...scores) - Math.min(...scores)).toFixed(2);
-      calibration.push({ name: entry.name, delta, runCount: entry.runs.length });
-    }
-  });
-
-  aggregated.sort((a,b) => b.avg - a.avg);
-  return { aggregated, calibration, reportCount: allData.length, testCaseCount: allData[0]?.results[0]?.test_results?.length || 0 };
+// Fetch the precomputed leaderboard. Materialized at build time by scripts/generate_demo_data.py.
+async function fetchLeaderboard() {
+  if (cache._leaderboard) return cache._leaderboard;
+  const r = await fetch('/demo/data/leaderboard.json');
+  cache._leaderboard = await r.json();
+  return cache._leaderboard;
 }
 
 // --- RENDERERS ---
@@ -309,16 +267,10 @@ async function aggregateAllRuns() {
 async function renderLeaderboard() {
   updateNav('leaderboard');
   const app = document.getElementById('app');
-  const reports = await fetchList();
 
-  if (!reports.length) {
-    app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>python evalpulse.py --run-eval</code></p></div>';
-    return;
-  }
-
-  const { aggregated, calibration, reportCount, testCaseCount } = await aggregateAllRuns();
+  const { aggregated = [], calibration = [], reportCount = 0, testCaseCount = 0 } = await fetchLeaderboard();
   if (!aggregated.length) {
-    app.innerHTML = '<div class="empty-state"><h2>No model results found</h2></div>';
+    app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>python evalpulse.py --run-eval</code></p></div>';
     return;
   }
 
