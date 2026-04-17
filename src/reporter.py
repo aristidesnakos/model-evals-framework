@@ -36,10 +36,16 @@ def generate_report(eval_results: dict) -> str:
     model_summaries = []
     for model_result in results:
         test_results = model_result["test_results"]
-        all_scores = [tr["avg_score"] for tr in test_results if tr["avg_score"] > 0]
+        # Exclude skipped tests (avg_score=None) and zero-scored tests from rollup.
+        all_scores = [
+            tr["avg_score"]
+            for tr in test_results
+            if tr.get("avg_score") not in (None, 0)
+        ]
         all_latencies = []
         total_tokens = 0
         errors = model_result["errors"]
+        skipped_tests = sum(1 for tr in test_results if tr.get("skipped"))
 
         for tr in test_results:
             for run in tr["runs"]:
@@ -51,7 +57,7 @@ def generate_report(eval_results: dict) -> str:
         avg_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
         min_score = min(all_scores) if all_scores else 0
         max_score = max(all_scores) if all_scores else 0
-        std_devs = [tr["std_dev"] for tr in test_results if tr["std_dev"] > 0]
+        std_devs = [tr["std_dev"] for tr in test_results if tr.get("std_dev", 0) > 0]
         avg_std = round(sum(std_devs) / len(std_devs), 2) if std_devs else 0
         avg_lat = round(sum(all_latencies) / len(all_latencies), 1) if all_latencies else 0
 
@@ -65,16 +71,22 @@ def generate_report(eval_results: dict) -> str:
             "avg_latency": avg_lat,
             "total_tokens": total_tokens,
             "errors": errors,
+            "skipped_tests": skipped_tests,
         })
 
     # Sort by avg score descending
     model_summaries.sort(key=lambda x: x["avg_score"], reverse=True)
 
     for ms in model_summaries:
+        errors_cell = (
+            f"{ms['errors']} ({ms['skipped_tests']} skipped)"
+            if ms.get("skipped_tests")
+            else str(ms["errors"])
+        )
         lines.append(
             f"| {ms['model_name']} | {ms['avg_score']}/10 | {ms['min_score']} | "
             f"{ms['max_score']} | {ms['avg_std']} | {ms['avg_latency']}s | "
-            f"{ms['total_tokens']:,} | {ms['errors']} |"
+            f"{ms['total_tokens']:,} | {errors_cell} |"
         )
 
     lines.append("")
@@ -98,6 +110,7 @@ def generate_report(eval_results: dict) -> str:
             lines.append("|-------|-----|---------|-------------|----------|--------|--------|---------|")
 
             tc_rows = []
+            color_match_lines: list[str] = []
             for model_result in results:
                 # Find matching test case
                 matching = [
@@ -118,18 +131,46 @@ def generate_report(eval_results: dict) -> str:
 
                 tc_rows.append({
                     "model_name": model_result["model_name"],
-                    "avg": tr["avg_score"],
-                    "std_dev": tr["std_dev"],
+                    "avg": tr.get("avg_score"),
+                    "std_dev": tr.get("std_dev", 0.0),
+                    "skipped": bool(tr.get("skipped")),
                     **dim_avgs,
                 })
 
-            tc_rows.sort(key=lambda x: x["avg"], reverse=True)
+                # Collect color-match summary across runs (if present).
+                cm_runs = [r.get("color_match") for r in tr["runs"] if r.get("color_match")]
+                if cm_runs:
+                    first = cm_runs[0]
+                    matched = sum(r.get("matched_count", 0) for r in cm_runs) / len(cm_runs)
+                    expected_ct = first.get("expected_count", 0)
+                    deltas = [r.get("mean_delta_e") for r in cm_runs if r.get("mean_delta_e") is not None]
+                    mean_de = round(sum(deltas) / len(deltas), 2) if deltas else None
+                    color_match_lines.append(
+                        f"- **{model_result['model_name']}** — "
+                        f"matched {matched:.1f}/{expected_ct} within ΔE ≤ "
+                        f"{first.get('tolerance')}, mean ΔE = "
+                        f"{mean_de if mean_de is not None else 'n/a'}"
+                    )
+
+            # Sort: skipped rows last, then by avg descending.
+            tc_rows.sort(
+                key=lambda x: (x["skipped"], -(x["avg"] if x["avg"] is not None else -1))
+            )
             for row in tc_rows:
-                lines.append(
-                    f"| {row['model_name']} | {row['avg']} | {row['std_dev']} | "
-                    f"{row['completeness']} | {row['accuracy']} | {row['format']} | "
-                    f"{row['domain_relevance']} | {row['clarity']} |"
-                )
+                if row["skipped"]:
+                    lines.append(
+                        f"| {row['model_name']} | SKIPPED | — | — | — | — | — | — |"
+                    )
+                else:
+                    lines.append(
+                        f"| {row['model_name']} | {row['avg']} | {row['std_dev']} | "
+                        f"{row['completeness']} | {row['accuracy']} | {row['format']} | "
+                        f"{row['domain_relevance']} | {row['clarity']} |"
+                    )
+            if color_match_lines:
+                lines.append("")
+                lines.append("**Color match (CIEDE2000):**")
+                lines.extend(color_match_lines)
             lines.append("")
 
     # --- Reliability analysis ---

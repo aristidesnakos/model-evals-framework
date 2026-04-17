@@ -3,6 +3,7 @@ Runs evaluation suite against enabled models.
 Scores with dual LLM judges via OpenRouter.
 """
 
+import base64
 import json
 import re
 import time
@@ -11,8 +12,36 @@ from pathlib import Path
 
 from openai import OpenAI
 
+from color_scoring import (
+    extract_hex_codes,
+    format_color_match_for_judge,
+    score_palette,
+)
+
 EVALS_DIR = Path(__file__).parent.parent / "evals"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10MB
+_IMAGE_MIME_BY_SUFFIX = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+def _encode_image_data_url(image_path: Path) -> str:
+    """Read an image file and return a base64 data URL for OpenAI content-parts."""
+    mime = _IMAGE_MIME_BY_SUFFIX.get(image_path.suffix.lower())
+    if mime is None:
+        raise ValueError(
+            f"Unsupported image extension: {image_path.suffix} "
+            f"(expected one of {sorted(_IMAGE_MIME_BY_SUFFIX)})"
+        )
+    data = image_path.read_bytes()
+    b64 = base64.b64encode(data).decode("ascii")
+    return f"data:{mime};base64,{b64}"
 
 
 def load_suite(suite_name: str) -> dict:
@@ -58,7 +87,12 @@ def validate_output(output: str, validation: dict) -> dict:
     }
 
 
-def build_judge_prompt(test_case: dict, model_output: str, suite_description: str = "") -> str:
+def build_judge_prompt(
+    test_case: dict,
+    model_output: str,
+    suite_description: str = "",
+    color_match: dict | None = None,
+) -> str:
     """Build the scoring prompt for the LLM judge."""
     criteria = test_case["scoring_criteria"]
     reference = test_case.get("reference_answer", "No reference provided.")
@@ -66,6 +100,10 @@ def build_judge_prompt(test_case: dict, model_output: str, suite_description: st
     preamble = "You are an expert evaluator."
     if suite_description:
         preamble += f" Context: {suite_description}"
+
+    color_block = ""
+    if color_match is not None:
+        color_block = "\n\n" + format_color_match_for_judge(color_match)
 
     return f"""{preamble}
 
@@ -80,7 +118,7 @@ Score the following model output against the criteria below. Be strict and speci
 {reference}
 
 ## Model Output
-{model_output}
+{model_output}{color_block}
 
 ## Scoring Criteria
 Score each dimension from 1-10:
@@ -138,13 +176,41 @@ def compute_weighted_score(scores: dict, weights: dict) -> float:
     return round(total, 2)
 
 
-def call_model(client: OpenAI, model_id: str, prompt: str) -> dict:
-    """Call a model via OpenRouter."""
+def call_model(
+    client: OpenAI,
+    model_id: str,
+    prompt: str,
+    image_path: Path | None = None,
+) -> dict:
+    """Call a model via OpenRouter.
+
+    If image_path is provided, the message is sent as a multimodal
+    content-parts array (text + image_url data URL). The caller is responsible
+    for checking that the model supports vision.
+    """
     start = time.time()
     try:
+        if image_path is not None:
+            try:
+                size = image_path.stat().st_size
+            except OSError as e:
+                raise RuntimeError(f"Cannot read image {image_path}: {e}") from e
+            if size > MAX_IMAGE_BYTES:
+                raise RuntimeError(
+                    f"Image {image_path.name} is {size / 1_000_000:.1f}MB, "
+                    f"exceeds {MAX_IMAGE_BYTES / 1_000_000:.0f}MB limit. Downsize it."
+                )
+            data_url = _encode_image_data_url(image_path)
+            content: list | str = [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": data_url}},
+            ]
+        else:
+            content = prompt
+
         response = client.chat.completions.create(
             model=model_id,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": content}],
             temperature=0.3,
             max_tokens=4096,
         )
@@ -177,9 +243,12 @@ def judge_output(
     test_case: dict,
     model_output: str,
     suite_description: str = "",
+    color_match: dict | None = None,
 ) -> dict:
     """Score a model output using an LLM judge."""
-    prompt = build_judge_prompt(test_case, model_output, suite_description)
+    prompt = build_judge_prompt(
+        test_case, model_output, suite_description, color_match=color_match
+    )
     result = call_model(client, judge_model, prompt)
 
     if result["error"]:
@@ -248,10 +317,48 @@ def run_evaluation(
 
         for tc in test_cases:
             tc_runs = []
+            tc_image_path_raw = tc.get("image_path")
+            tc_needs_vision = bool(tc_image_path_raw)
+            tc_image_path = (
+                (EVALS_DIR / tc_image_path_raw) if tc_image_path_raw else None
+            )
+            expected_colors = tc.get("expected_colors")
+
+            # Skip whole test case for non-vision models when vision is required.
+            if tc_needs_vision and not model.get("vision"):
+                print(
+                    f"  Skipping {tc['id']} ({tc['name']}) — "
+                    f"model has no vision capability"
+                )
+                tc_runs.append({
+                    "run": 0,
+                    "skipped": True,
+                    "reason": "model has no vision capability",
+                    "error": None,
+                    "latency": 0.0,
+                    "scores": None,
+                    "weighted_score": None,
+                    "validation": None,
+                })
+                model_results["test_results"].append({
+                    "test_case_id": tc["id"],
+                    "test_case_name": tc["name"],
+                    "category": tc["category"],
+                    "runs": tc_runs,
+                    "avg_score": None,
+                    "std_dev": 0.0,
+                    "min_score": None,
+                    "max_score": None,
+                    "skipped": True,
+                    "skipped_reason": "model has no vision capability",
+                })
+                continue
 
             for run_idx in range(runs_per_test):
-                # Call the model
-                result = call_model(client, model_id, tc["prompt"])
+                # Call the model (with image if configured)
+                result = call_model(
+                    client, model_id, tc["prompt"], image_path=tc_image_path
+                )
 
                 if result["error"]:
                     model_results["errors"] += 1
@@ -282,12 +389,23 @@ def run_evaluation(
                     })
                     continue
 
+                # Deterministic color-palette scoring (if this test case has ground truth)
+                color_match = None
+                if expected_colors:
+                    extracted = extract_hex_codes(result["output"])
+                    color_match = score_palette(
+                        expected_colors,
+                        extracted,
+                        tolerance=tc.get("color_tolerance", 10.0),
+                    )
+
                 # Judge with dual judges and average
                 all_judge_scores = []
                 for jm in judge_models:
                     judge_result = judge_output(
                         client, jm["id"], tc, result["output"],
                         suite_description=suite_description,
+                        color_match=color_match,
                     )
                     if judge_result["scores"]:
                         all_judge_scores.append(judge_result["scores"])
@@ -301,6 +419,7 @@ def run_evaluation(
                         "scores": None,
                         "weighted_score": 0,
                         "validation": validation,
+                        "color_match": color_match,
                     })
                     continue
 
@@ -312,7 +431,7 @@ def run_evaluation(
 
                 weighted = compute_weighted_score(avg_scores, weights)
 
-                tc_runs.append({
+                run_record = {
                     "run": run_idx,
                     "error": None,
                     "latency": result["latency"],
@@ -323,16 +442,23 @@ def run_evaluation(
                     "judge_reasoning": [
                         s.get("reasoning", "") for s in all_judge_scores
                     ],
-                })
+                }
+                if color_match is not None:
+                    run_record["color_match"] = color_match
+                tc_runs.append(run_record)
 
-            # Aggregate runs for this test case
-            valid_runs = [r for r in tc_runs if r["weighted_score"] > 0]
+            # Aggregate runs for this test case (exclude skipped and zero/None).
+            valid_runs = [
+                r for r in tc_runs
+                if not r.get("skipped")
+                and r.get("weighted_score") not in (None, 0)
+            ]
+            score_values = [r["weighted_score"] for r in valid_runs]
             avg_score = (
-                round(sum(r["weighted_score"] for r in valid_runs) / len(valid_runs), 2)
-                if valid_runs
+                round(sum(score_values) / len(score_values), 2)
+                if score_values
                 else 0
             )
-            score_values = [r["weighted_score"] for r in valid_runs]
             std_dev = 0.0
             if len(score_values) > 1:
                 mean = sum(score_values) / len(score_values)
