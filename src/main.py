@@ -25,6 +25,7 @@ from evaluator import (
     run_evaluation, load_suite, call_model, validate_output,
     judge_output, compute_weighted_score, OPENROUTER_BASE_URL,
 )
+from safety_evaluator import run_safety_evaluation
 from reporter import save_report
 
 GITHUB_ISSUES = "https://github.com/aristidesnakos/model-evals-framework/issues"
@@ -37,6 +38,10 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
     from color_scoring import extract_hex_codes, score_palette
 
     suite = load_suite(suite_name)
+    if suite.get("eval_type") == "safety":
+        _run_safety_dry_run(api_key, models, judge_models, suite_name, suite)
+        return
+
     weights = suite["scoring_weights"]
     test_cases = suite["test_cases"]
     suite_description = suite.get("description", "")
@@ -168,6 +173,137 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
     print(f"  python evalpulse.py --run-eval --suite {suite_name}")
 
 
+def _save_safety_raw(eval_results: dict) -> Path:
+    """Save raw safety eval JSON to reports/. The safety markdown reporter
+    is Phase 4a and not yet implemented."""
+    reports_dir = Path(__file__).parent.parent / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    run_id = eval_results["run_id"]
+    suite_name = eval_results["suite_name"]
+    path = reports_dir / f"{suite_name}_{run_id}.json"
+    path.write_text(json.dumps(eval_results, indent=2, default=str))
+    return path
+
+
+def _print_safety_gate_summary(eval_results: dict) -> None:
+    gate = eval_results.get("gate_result", {})
+    print(f"\nSuite coverage: {gate.get('suite_coverage', 'unknown').upper()}")
+    models = gate.get("models", {})
+    if not models:
+        return
+    print("\nPer-model gate results:")
+    for model_id, info in models.items():
+        print(
+            f"  {info['result'].upper():7s} | tier {info['tier']} | "
+            f"score {info['safety_score']:.2f}/10 | {model_id}"
+        )
+        for cf in info.get("critical_failures", []):
+            print(f"     - FAIL: {cf['reason']} on {cf['test_case_id']}")
+        for rf in info.get("review_flags", []):
+            print(f"     - REVIEW: {rf}")
+
+
+def _run_safety_dry_run(
+    api_key: str,
+    models: list,
+    judge_models: list,
+    suite_name: str,
+    suite: dict,
+) -> None:
+    """Dry-run for safety suites: execute the first test case end-to-end
+    (all turns) and judge the final turn with both judges."""
+    from openai import OpenAI
+    from safety_evaluator import (
+        execute_conversation,
+        judge_turn,
+        apply_severity_deficit,
+        compute_break_turn_index,
+        DEFAULT_SAFETY_WEIGHTS,
+    )
+
+    weights = suite.get("scoring_weights", DEFAULT_SAFETY_WEIGHTS)
+    test_cases = suite["test_cases"]
+
+    enabled = [m for m in models if m.get("enabled")]
+    if not enabled:
+        print("Error: No enabled models in models.json")
+        sys.exit(1)
+
+    model = enabled[0]
+    tc = test_cases[0]
+    severity = tc.get("severity", "low")
+    is_comply = tc.get("expected_behavior") == "comply"
+
+    print()
+    print("DRY RUN (safety) -- verifying pipeline with 1 test case, 1 model, 1 iteration")
+    print("=" * 60)
+    print(f"Model: {model.get('name', model['id'])} ({model['id']})")
+    print(f"Test:  {tc['name']} ({tc['id']})")
+    print(f"Suite: {suite['suite_name']} (eval_type=safety)")
+    print(f"Category: {tc.get('category')} | Attack: {tc.get('attack_type')} | "
+          f"Severity: {severity} | Expected: {tc.get('expected_behavior')}")
+    print(f"Turns: {len(tc.get('turns', []))}")
+
+    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+
+    print("\nExecuting conversation...", flush=True)
+    convo = execute_conversation(
+        client, model["id"], tc.get("system_prompt"), tc.get("turns", [])
+    )
+
+    if convo["aborted_at_turn"] is not None:
+        err_turn = next((t for t in convo["assistant_turns"] if t.get("error")), None)
+        print(f"  ABORTED at turn {convo['aborted_at_turn']}: "
+              f"{err_turn['error'] if err_turn else 'unknown error'}")
+        print("\nHint: Check your OPENROUTER_API_KEY and model availability.")
+        sys.exit(1)
+
+    for a_turn in convo["assistant_turns"]:
+        preview = a_turn["assistant"][:200] + ("..." if len(a_turn["assistant"]) > 200 else "")
+        print(f"\n-- Turn {a_turn['turn']} (user: {a_turn['user'][:80]!r}) "
+              f"[{a_turn['latency']}s]")
+        print(f"   Assistant: {preview}")
+
+    # Judge every turn
+    turn_records = []
+    running_messages = []
+    if tc.get("system_prompt"):
+        running_messages.append({"role": "system", "content": tc["system_prompt"]})
+
+    for a_turn in convo["assistant_turns"]:
+        running_messages.append({"role": "user", "content": a_turn["user"]})
+        running_messages.append({"role": "assistant", "content": a_turn["assistant"]})
+
+        print(f"\nJudging turn {a_turn['turn']}...", flush=True)
+        j = judge_turn(
+            client, judge_models, tc, running_messages,
+            turn_idx=a_turn["turn"], is_comply_variant=is_comply, weights=weights,
+        )
+        turn_records.append({"turn": a_turn["turn"], "judge_scores": j["judge_scores"]})
+        if j["judge_errors"]:
+            print(f"  Judge errors: {j['judge_errors']}")
+        if j["judge_scores"]:
+            dims = " | ".join(f"{k}: {v}" for k, v in j["judge_scores"].items())
+            print(f"  Scores:   {dims}")
+            print(f"  Weighted: {j['weighted_score']}/10")
+        else:
+            print(f"  Judges produced no usable score.")
+
+    final_weighted = (turn_records[-1]["judge_scores"] or {}).get("refused") is not None and turn_records[-1]
+    final = next((t for t in reversed(turn_records) if t.get("judge_scores")), None)
+    if final:
+        final_scores = final["judge_scores"]
+        final_weighted_val = sum(final_scores.get(d, 0) * w for d, w in weights.items())
+        severity_adj = apply_severity_deficit(final_weighted_val, severity)
+        break_turn = compute_break_turn_index(turn_records)
+        print(f"\nFinal turn weighted: {round(final_weighted_val, 2)}/10")
+        print(f"Severity-adjusted ({severity}): {severity_adj}/10")
+        print(f"Break turn index: {break_turn}")
+
+    print(f"\nSafety pipeline verified. Run the full evaluation with:")
+    print(f"  python evalpulse.py --run-eval --suite {suite_name}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="EvalPulse — Automated LLM evaluation pipeline",
@@ -273,16 +409,35 @@ def main():
             print(f"Judge models: {', '.join(jm['id'] for jm in judge_models)}")
             print(f"Suite: {args.suite}")
 
-            eval_results = run_evaluation(
-                api_key=api_key,
-                models=models,
-                judge_models=judge_models,
-                suite_name=args.suite,
-                budget=args.budget,
-            )
+            suite_peek = load_suite(args.suite)
+            eval_type = suite_peek.get("eval_type", "quality")
+            print(f"Eval type: {eval_type}")
+
+            if eval_type == "safety":
+                eval_results = run_safety_evaluation(
+                    api_key=api_key,
+                    models=models,
+                    judge_models=judge_models,
+                    suite_name=args.suite,
+                    budget=args.budget,
+                )
+            else:
+                eval_results = run_evaluation(
+                    api_key=api_key,
+                    models=models,
+                    judge_models=judge_models,
+                    suite_name=args.suite,
+                    budget=args.budget,
+                )
 
             if eval_results.get("error"):
                 print(f"\nEvaluation stopped: {eval_results['error']}")
+                if eval_results.get("gate_result"):
+                    gr = eval_results["gate_result"]
+                    if gr.get("suite_coverage") == "fail":
+                        print("\nGate 1 coverage failures:")
+                        for name, msg in gr.get("gate_1_failures", []):
+                            print(f"  - {name}: {msg}")
                 sys.exit(1)
 
             # Step 3: Generate report
@@ -290,8 +445,15 @@ def main():
             print("Generating report...")
             print("=" * 60)
 
-            report_path = save_report(eval_results)
-            print(f"\nDone. Report: {report_path}")
+            if eval_type == "safety":
+                # Safety reporter is Phase 4a (not yet implemented) — save
+                # raw JSON and print the gate summary.
+                report_path = _save_safety_raw(eval_results)
+                print(f"\nRaw results: {report_path}")
+                _print_safety_gate_summary(eval_results)
+            else:
+                report_path = save_report(eval_results)
+                print(f"\nDone. Report: {report_path}")
 
         # Step 4: Dashboard
         if args.dashboard:
