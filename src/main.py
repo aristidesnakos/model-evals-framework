@@ -86,7 +86,11 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
 
     # Call model
     print("\nCalling model...", end=" ", flush=True)
-    result = call_model(client, model["id"], tc["prompt"], image_path=image_path)
+    result = call_model(
+        client, model["id"],
+        [{"role": "user", "content": tc["prompt"]}],
+        image_path=image_path,
+    )
 
     if result["error"]:
         print(f"FAILED")
