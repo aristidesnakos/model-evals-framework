@@ -8,3 +8,10 @@ IMPLEMENTATION_SUMMARY.md
 
 /docs/*
 *.DS_Store
+
+# Image-safety: NEVER commit unsafe/explicit imagery or artifacts derived from it.
+# Real unsafe-labeled images live here, out of git (see evals/assets/image_safety/README.md).
+evals/assets/**/private/
+# Classification run reports can contain model `reason` text describing unsafe images.
+reports/image_safety_*.json
+reports/image_safety_*.md
