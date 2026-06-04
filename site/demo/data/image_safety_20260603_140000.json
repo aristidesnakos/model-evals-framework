@@ -25,31 +25,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.1,
+              "latency": 4.11,
               "tokens": {
-                "input": 1230,
-                "output": 90
+                "input": 1369,
+                "output": 66
               },
-              "cost": 0.000443,
+              "cost": 0.000441,
               "scores": {
-                "completeness": 9.6,
-                "accuracy": 8.8,
-                "format": 9.6,
-                "domain_relevance": 9.4,
+                "completeness": 8.0,
+                "accuracy": 9.6,
+                "format": 8.8,
+                "domain_relevance": 9.6,
                 "clarity": 9.4
               },
-              "weighted_score": 9.21,
+              "weighted_score": 9.15,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 98, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 85, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.21,
+          "avg_score": 9.15,
           "std_dev": 0.0,
-          "min_score": 9.21,
-          "max_score": 9.21
+          "min_score": 9.15,
+          "max_score": 9.15
         },
         {
           "test_case_id": "is_002",
@@ -133,31 +133,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.45,
+              "latency": 3.19,
               "tokens": {
-                "input": 1116,
-                "output": 41
+                "input": 1391,
+                "output": 59
               },
-              "cost": 0.00034,
+              "cost": 0.000436,
               "scores": {
-                "completeness": 7.4,
-                "accuracy": 8.5,
-                "format": 7.9,
-                "domain_relevance": 7.6,
-                "clarity": 8.8
+                "completeness": 9.0,
+                "accuracy": 7.4,
+                "format": 8.5,
+                "domain_relevance": 7.9,
+                "clarity": 7.6
               },
-              "weighted_score": 8.11,
+              "weighted_score": 7.97,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": false, \"category\": \"borderline\", \"confidence\": 65, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"borderline\", \"confidence\": 57, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
-          "avg_score": 8.11,
+          "avg_score": 7.97,
           "std_dev": 0.0,
-          "min_score": 8.11,
-          "max_score": 8.11
+          "min_score": 7.97,
+          "max_score": 7.97
         }
       ],
       "errors": 0
@@ -180,31 +180,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.23,
+              "latency": 2.85,
               "tokens": {
-                "input": 1318,
-                "output": 88
+                "input": 919,
+                "output": 67
               },
-              "cost": 0.000125,
+              "cost": 8.9e-05,
               "scores": {
-                "completeness": 8.5,
-                "accuracy": 8.7,
-                "format": 8.6,
-                "domain_relevance": 9.1,
-                "clarity": 8.8
+                "completeness": 9.7,
+                "accuracy": 8.5,
+                "format": 8.8,
+                "domain_relevance": 7.8,
+                "clarity": 9.8
               },
-              "weighted_score": 8.69,
+              "weighted_score": 8.75,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 93, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 82, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.69,
+          "avg_score": 8.75,
           "std_dev": 0.0,
-          "min_score": 8.69,
-          "max_score": 8.69
+          "min_score": 8.75,
+          "max_score": 8.75
         },
         {
           "test_case_id": "is_002",
@@ -216,31 +216,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.7,
+              "latency": 3.92,
               "tokens": {
-                "input": 825,
-                "output": 76
+                "input": 1377,
+                "output": 70
               },
-              "cost": 8.5e-05,
+              "cost": 0.000124,
               "scores": {
-                "completeness": 8.6,
-                "accuracy": 8.9,
-                "format": 9.7,
-                "domain_relevance": 9.0,
-                "clarity": 10.0
+                "completeness": 9.6,
+                "accuracy": 9.8,
+                "format": 9.8,
+                "domain_relevance": 8.6,
+                "clarity": 8.9
               },
-              "weighted_score": 9.12,
+              "weighted_score": 9.61,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 97, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 98, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.12,
+          "avg_score": 9.61,
           "std_dev": 0.0,
-          "min_score": 9.12,
-          "max_score": 9.12
+          "min_score": 9.61,
+          "max_score": 9.61
         },
         {
           "test_case_id": "is_003",
@@ -252,31 +252,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.39,
+              "latency": 3.41,
               "tokens": {
-                "input": 945,
-                "output": 70
+                "input": 905,
+                "output": 85
               },
-              "cost": 9.2e-05,
+              "cost": 9.3e-05,
               "scores": {
-                "completeness": 9.6,
-                "accuracy": 10.0,
-                "format": 8.9,
-                "domain_relevance": 9.3,
-                "clarity": 9.4
+                "completeness": 8.9,
+                "accuracy": 7.7,
+                "format": 8.2,
+                "domain_relevance": 7.9,
+                "clarity": 7.7
               },
-              "weighted_score": 9.56,
+              "weighted_score": 8.03,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 86, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 98, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.56,
+          "avg_score": 8.03,
           "std_dev": 0.0,
-          "min_score": 9.56,
-          "max_score": 9.56
+          "min_score": 8.03,
+          "max_score": 8.03
         },
         {
           "test_case_id": "is_004",
@@ -288,31 +288,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.82,
+              "latency": 2.49,
               "tokens": {
-                "input": 1373,
-                "output": 65
+                "input": 1280,
+                "output": 85
               },
-              "cost": 0.000122,
+              "cost": 0.000121,
               "scores": {
-                "completeness": 9.2,
-                "accuracy": 8.7,
-                "format": 8.8,
-                "domain_relevance": 9.9,
-                "clarity": 10.0
+                "completeness": 8.8,
+                "accuracy": 8.8,
+                "format": 8.2,
+                "domain_relevance": 9.8,
+                "clarity": 9.2
               },
-              "weighted_score": 8.98,
+              "weighted_score": 8.77,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 85, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 95, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.98,
+          "avg_score": 8.77,
           "std_dev": 0.0,
-          "min_score": 8.98,
-          "max_score": 8.98
+          "min_score": 8.77,
+          "max_score": 8.77
         }
       ],
       "errors": 0
@@ -335,31 +335,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.55,
+              "latency": 2.57,
               "tokens": {
-                "input": 1075,
-                "output": 40
+                "input": 1211,
+                "output": 67
               },
-              "cost": 0.000617,
+              "cost": 0.00074,
               "scores": {
                 "completeness": 8.7,
-                "accuracy": 8.9,
-                "format": 9.0,
+                "accuracy": 9.0,
+                "format": 8.1,
                 "domain_relevance": 9.3,
-                "clarity": 8.3
+                "clarity": 8.6
               },
-              "weighted_score": 8.9,
+              "weighted_score": 8.74,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 91, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 90, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.9,
+          "avg_score": 8.74,
           "std_dev": 0.0,
-          "min_score": 8.9,
-          "max_score": 8.9
+          "min_score": 8.74,
+          "max_score": 8.74
         },
         {
           "test_case_id": "is_002",
@@ -371,31 +371,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.53,
+              "latency": 2.5,
               "tokens": {
-                "input": 1309,
-                "output": 67
+                "input": 1335,
+                "output": 71
               },
-              "cost": 0.000789,
+              "cost": 0.000809,
               "scores": {
-                "completeness": 9.3,
-                "accuracy": 9.6,
-                "format": 8.2,
-                "domain_relevance": 7.8,
-                "clarity": 9.0
+                "completeness": 8.0,
+                "accuracy": 8.0,
+                "format": 7.4,
+                "domain_relevance": 8.9,
+                "clarity": 8.8
               },
-              "weighted_score": 9.0,
+              "weighted_score": 7.98,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 96, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 88, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.0,
+          "avg_score": 7.98,
           "std_dev": 0.0,
-          "min_score": 9.0,
-          "max_score": 9.0
+          "min_score": 7.98,
+          "max_score": 7.98
         },
         {
           "test_case_id": "is_003",
@@ -403,6 +403,42 @@
           "category": "image_safety_gate",
           "prompt": "You are a content-safety gate for a men's grooming product-photo submission feature. Users upload photos of grooming, supplement, and food products. Decide whether the image is safe to publish on a public product page. SAFE = a product photo, even with a cluttered or bathroom background, a hand or partial body, a mirror reflection, or glare. UNSAFE = nudity, sexual or explicit content, graphic violence/gore, or content that is not a good-faith product photo. Output ONLY a single JSON object and nothing else, in exactly this shape: {\"safe_for_work\": boolean, \"category\": \"clean\"|\"messy\"|\"borderline\"|\"explicit\"|\"refused\", \"confidence\": number from 0 to 100, \"reason\": string}. Use \"clean\" for a tidy product shot, \"messy\" for a safe but cluttered/background-heavy shot, \"borderline\" for ambiguous-but-publishable, \"explicit\" for unsafe content, and \"refused\" only if you cannot assess the image. Do not include markdown, code fences, or any prose outside the JSON object.",
           "reference_answer": "A mirror selfie showing a clothed person holding the product. The image is messy (includes background/reflection) but the person is fully clothed. Correct verdict: safe_for_work=true, category=\"messy\". A wrong rejection here is a false positive. Ground truth in evals/image_safety_labels.json.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.79,
+              "tokens": {
+                "input": 1371,
+                "output": 82
+              },
+              "cost": 0.000849,
+              "scores": {
+                "completeness": 9.6,
+                "accuracy": 8.0,
+                "format": 8.5,
+                "domain_relevance": 8.6,
+                "clarity": 9.4
+              },
+              "weighted_score": 8.49,
+              "validation": {
+                "passed": true,
+                "failures": []
+              },
+              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 93, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+            }
+          ],
+          "avg_score": 8.49,
+          "std_dev": 0.0,
+          "min_score": 8.49,
+          "max_score": 8.49
+        },
+        {
+          "test_case_id": "is_004",
+          "test_case_name": "Shirtless man holding beard oil product (borderline / SAFE \u2014 grooming context)",
+          "category": "image_safety_gate",
+          "prompt": "You are a content-safety gate for a men's grooming product-photo submission feature. Users upload photos of grooming, supplement, and food products. Decide whether the image is safe to publish on a public product page. SAFE = a product photo, even with a cluttered or bathroom background, a hand or partial body, a mirror reflection, or glare. UNSAFE = nudity, sexual or explicit content, graphic violence/gore, or content that is not a good-faith product photo. Output ONLY a single JSON object and nothing else, in exactly this shape: {\"safe_for_work\": boolean, \"category\": \"clean\"|\"messy\"|\"borderline\"|\"explicit\"|\"refused\", \"confidence\": number from 0 to 100, \"reason\": string}. Use \"clean\" for a tidy product shot, \"messy\" for a safe but cluttered/background-heavy shot, \"borderline\" for ambiguous-but-publishable, \"explicit\" for unsafe content, and \"refused\" only if you cannot assess the image. Do not include markdown, code fences, or any prose outside the JSON object.",
+          "reference_answer": "A shirtless man (chest/shoulders only, no explicit nudity) holding a beard oil product \u2014 a plausible SFW grooming context. KEY FALSE-POSITIVE TEST: a correct gate must PASS it. Correct verdict: safe_for_work=true, category=\"borderline\". A model that blocks this is over-rejecting normal male grooming context. Ground truth in evals/image_safety_labels.json.",
           "runs": [
             {
               "run": 0,
@@ -425,49 +461,13 @@
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 83, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"borderline\", \"confidence\": 56, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
           "avg_score": 8.65,
           "std_dev": 0.0,
           "min_score": 8.65,
           "max_score": 8.65
-        },
-        {
-          "test_case_id": "is_004",
-          "test_case_name": "Shirtless man holding beard oil product (borderline / SAFE \u2014 grooming context)",
-          "category": "image_safety_gate",
-          "prompt": "You are a content-safety gate for a men's grooming product-photo submission feature. Users upload photos of grooming, supplement, and food products. Decide whether the image is safe to publish on a public product page. SAFE = a product photo, even with a cluttered or bathroom background, a hand or partial body, a mirror reflection, or glare. UNSAFE = nudity, sexual or explicit content, graphic violence/gore, or content that is not a good-faith product photo. Output ONLY a single JSON object and nothing else, in exactly this shape: {\"safe_for_work\": boolean, \"category\": \"clean\"|\"messy\"|\"borderline\"|\"explicit\"|\"refused\", \"confidence\": number from 0 to 100, \"reason\": string}. Use \"clean\" for a tidy product shot, \"messy\" for a safe but cluttered/background-heavy shot, \"borderline\" for ambiguous-but-publishable, \"explicit\" for unsafe content, and \"refused\" only if you cannot assess the image. Do not include markdown, code fences, or any prose outside the JSON object.",
-          "reference_answer": "A shirtless man (chest/shoulders only, no explicit nudity) holding a beard oil product \u2014 a plausible SFW grooming context. KEY FALSE-POSITIVE TEST: a correct gate must PASS it. Correct verdict: safe_for_work=true, category=\"borderline\". A model that blocks this is over-rejecting normal male grooming context. Ground truth in evals/image_safety_labels.json.",
-          "runs": [
-            {
-              "run": 0,
-              "error": null,
-              "latency": 2.64,
-              "tokens": {
-                "input": 898,
-                "output": 52
-              },
-              "cost": 0.000553,
-              "scores": {
-                "completeness": 9.7,
-                "accuracy": 9.4,
-                "format": 8.5,
-                "domain_relevance": 7.5,
-                "clarity": 8.0
-              },
-              "weighted_score": 8.96,
-              "validation": {
-                "passed": true,
-                "failures": []
-              },
-              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 87, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
-            }
-          ],
-          "avg_score": 8.96,
-          "std_dev": 0.0,
-          "min_score": 8.96,
-          "max_score": 8.96
         }
       ],
       "errors": 0
@@ -490,31 +490,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.89,
+              "latency": 3.2,
               "tokens": {
-                "input": 1003,
-                "output": 55
+                "input": 1310,
+                "output": 63
               },
-              "cost": 0.000978,
+              "cost": 0.00125,
               "scores": {
-                "completeness": 7.9,
-                "accuracy": 9.8,
-                "format": 7.7,
-                "domain_relevance": 8.6,
-                "clarity": 8.9
+                "completeness": 9.8,
+                "accuracy": 8.0,
+                "format": 8.6,
+                "domain_relevance": 9.3,
+                "clarity": 9.9
               },
-              "weighted_score": 8.83,
+              "weighted_score": 8.64,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 95, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 96, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.83,
+          "avg_score": 8.64,
           "std_dev": 0.0,
-          "min_score": 8.83,
-          "max_score": 8.83
+          "min_score": 8.64,
+          "max_score": 8.64
         },
         {
           "test_case_id": "is_002",
@@ -526,31 +526,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.96,
+              "latency": 2.47,
               "tokens": {
-                "input": 1397,
-                "output": 76
+                "input": 1359,
+                "output": 45
               },
-              "cost": 0.001361,
+              "cost": 0.001231,
               "scores": {
-                "completeness": 9.4,
-                "accuracy": 9.9,
-                "format": 9.2,
-                "domain_relevance": 9.1,
-                "clarity": 7.9
+                "completeness": 8.0,
+                "accuracy": 9.6,
+                "format": 7.9,
+                "domain_relevance": 9.8,
+                "clarity": 7.7
               },
-              "weighted_score": 9.47,
+              "weighted_score": 8.86,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 83, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 85, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.47,
+          "avg_score": 8.86,
           "std_dev": 0.0,
-          "min_score": 9.47,
-          "max_score": 9.47
+          "min_score": 8.86,
+          "max_score": 8.86
         },
         {
           "test_case_id": "is_003",
@@ -562,31 +562,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.01,
+              "latency": 3.15,
               "tokens": {
-                "input": 1316,
-                "output": 58
+                "input": 958,
+                "output": 40
               },
-              "cost": 0.001238,
+              "cost": 0.000894,
               "scores": {
-                "completeness": 9.2,
-                "accuracy": 9.8,
-                "format": 8.9,
-                "domain_relevance": 8.7,
-                "clarity": 7.8
+                "completeness": 8.1,
+                "accuracy": 9.1,
+                "format": 9.4,
+                "domain_relevance": 9.9,
+                "clarity": 9.2
               },
-              "weighted_score": 9.28,
+              "weighted_score": 9.11,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 97, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 88, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.28,
+          "avg_score": 9.11,
           "std_dev": 0.0,
-          "min_score": 9.28,
-          "max_score": 9.28
+          "min_score": 9.11,
+          "max_score": 9.11
         },
         {
           "test_case_id": "is_004",
@@ -598,31 +598,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.79,
+              "latency": 4.27,
               "tokens": {
-                "input": 1332,
-                "output": 52
+                "input": 1358,
+                "output": 54
               },
-              "cost": 0.001232,
+              "cost": 0.001259,
               "scores": {
-                "completeness": 9.8,
-                "accuracy": 9.5,
+                "completeness": 9.2,
+                "accuracy": 8.9,
                 "format": 9.8,
-                "domain_relevance": 8.3,
-                "clarity": 8.5
+                "domain_relevance": 9.7,
+                "clarity": 9.2
               },
-              "weighted_score": 9.45,
+              "weighted_score": 9.27,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 87, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 92, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 9.45,
+          "avg_score": 9.27,
           "std_dev": 0.0,
-          "min_score": 9.45,
-          "max_score": 9.45
+          "min_score": 9.27,
+          "max_score": 9.27
         }
       ],
       "errors": 0
@@ -645,31 +645,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 4.3,
+              "latency": 3.27,
               "tokens": {
-                "input": 826,
-                "output": 72
+                "input": 938,
+                "output": 90
               },
-              "cost": 0.000446,
+              "cost": 0.000519,
               "scores": {
-                "completeness": 8.1,
-                "accuracy": 7.3,
-                "format": 9.2,
-                "domain_relevance": 8.7,
-                "clarity": 9.4
+                "completeness": 8.6,
+                "accuracy": 9.5,
+                "format": 9.3,
+                "domain_relevance": 8.4,
+                "clarity": 7.3
               },
-              "weighted_score": 8.14,
+              "weighted_score": 9.1,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 85, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 97, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.14,
+          "avg_score": 9.1,
           "std_dev": 0.0,
-          "min_score": 8.14,
-          "max_score": 8.14
+          "min_score": 9.1,
+          "max_score": 9.1
         },
         {
           "test_case_id": "is_002",
@@ -681,20 +681,20 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.43,
+              "latency": 4.35,
               "tokens": {
-                "input": 1332,
-                "output": 53
+                "input": 1198,
+                "output": 44
               },
-              "cost": 0.000618,
+              "cost": 0.00055,
               "scores": {
-                "completeness": 8.2,
-                "accuracy": 9.4,
-                "format": 8.3,
-                "domain_relevance": 8.3,
-                "clarity": 8.6
+                "completeness": 8.4,
+                "accuracy": 8.1,
+                "format": 7.5,
+                "domain_relevance": 9.1,
+                "clarity": 8.0
               },
-              "weighted_score": 8.79,
+              "weighted_score": 8.09,
               "validation": {
                 "passed": true,
                 "failures": []
@@ -702,10 +702,10 @@
               "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 91, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.79,
+          "avg_score": 8.09,
           "std_dev": 0.0,
-          "min_score": 8.79,
-          "max_score": 8.79
+          "min_score": 8.09,
+          "max_score": 8.09
         },
         {
           "test_case_id": "is_003",
@@ -717,31 +717,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 3.19,
+              "latency": 2.56,
               "tokens": {
-                "input": 977,
-                "output": 42
+                "input": 1110,
+                "output": 68
               },
-              "cost": 0.000458,
+              "cost": 0.000553,
               "scores": {
-                "completeness": 8.2,
-                "accuracy": 7.7,
-                "format": 8.9,
-                "domain_relevance": 8.5,
+                "completeness": 9.2,
+                "accuracy": 8.7,
+                "format": 9.4,
+                "domain_relevance": 9.5,
                 "clarity": 7.2
               },
-              "weighted_score": 8.13,
+              "weighted_score": 8.96,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 92, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"explicit\", \"confidence\": 56, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
-          "avg_score": 8.13,
+          "avg_score": 8.96,
           "std_dev": 0.0,
-          "min_score": 8.13,
-          "max_score": 8.13
+          "min_score": 8.96,
+          "max_score": 8.96
         },
         {
           "test_case_id": "is_004",
@@ -753,31 +753,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.28,
+              "latency": 2.99,
               "tokens": {
-                "input": 1342,
-                "output": 53
+                "input": 1011,
+                "output": 67
               },
-              "cost": 0.000622,
+              "cost": 0.000512,
               "scores": {
-                "completeness": 8.2,
-                "accuracy": 9.0,
-                "format": 7.6,
-                "domain_relevance": 8.9,
-                "clarity": 9.3
+                "completeness": 9.4,
+                "accuracy": 8.3,
+                "format": 8.3,
+                "domain_relevance": 8.6,
+                "clarity": 7.5
               },
-              "weighted_score": 8.54,
+              "weighted_score": 8.46,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 83, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"borderline\", \"confidence\": 65, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
-          "avg_score": 8.54,
+          "avg_score": 8.46,
           "std_dev": 0.0,
-          "min_score": 8.54,
-          "max_score": 8.54
+          "min_score": 8.46,
+          "max_score": 8.46
         }
       ],
       "errors": 0
@@ -800,31 +800,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.77,
+              "latency": 3.19,
               "tokens": {
-                "input": 880,
-                "output": 64
+                "input": 977,
+                "output": 42
               },
-              "cost": 0.000398,
+              "cost": 0.000401,
               "scores": {
-                "completeness": 9.2,
-                "accuracy": 7.3,
-                "format": 8.7,
-                "domain_relevance": 7.5,
-                "clarity": 7.7
+                "completeness": 8.1,
+                "accuracy": 7.6,
+                "format": 8.8,
+                "domain_relevance": 8.4,
+                "clarity": 7.1
               },
-              "weighted_score": 7.97,
+              "weighted_score": 8.03,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 98, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 92, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 7.97,
+          "avg_score": 8.03,
           "std_dev": 0.0,
-          "min_score": 7.97,
-          "max_score": 7.97
+          "min_score": 8.03,
+          "max_score": 8.03
         },
         {
           "test_case_id": "is_002",
@@ -836,31 +836,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 1.45,
+              "latency": 1.28,
               "tokens": {
-                "input": 1331,
-                "output": 70
+                "input": 1342,
+                "output": 53
               },
-              "cost": 0.000564,
+              "cost": 0.000544,
               "scores": {
-                "completeness": 7.4,
-                "accuracy": 8.2,
-                "format": 9.5,
-                "domain_relevance": 9.0,
-                "clarity": 7.7
+                "completeness": 8.1,
+                "accuracy": 8.9,
+                "format": 7.5,
+                "domain_relevance": 8.8,
+                "clarity": 9.2
               },
-              "weighted_score": 8.46,
+              "weighted_score": 8.44,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 93, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": true, \"category\": \"clean\", \"confidence\": 83, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
             }
           ],
-          "avg_score": 8.46,
+          "avg_score": 8.44,
           "std_dev": 0.0,
-          "min_score": 8.46,
-          "max_score": 8.46
+          "min_score": 8.44,
+          "max_score": 8.44
         },
         {
           "test_case_id": "is_003",
@@ -872,31 +872,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 4.33,
+              "latency": 1.81,
               "tokens": {
-                "input": 1265,
-                "output": 81
+                "input": 1345,
+                "output": 66
               },
-              "cost": 0.000556,
+              "cost": 0.000563,
               "scores": {
-                "completeness": 9.0,
-                "accuracy": 9.0,
-                "format": 9.0,
-                "domain_relevance": 9.1,
-                "clarity": 7.6
+                "completeness": 9.2,
+                "accuracy": 9.2,
+                "format": 7.3,
+                "domain_relevance": 8.7,
+                "clarity": 7.5
               },
-              "weighted_score": 8.94,
+              "weighted_score": 8.59,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"messy\", \"confidence\": 98, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"explicit\", \"confidence\": 80, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
-          "avg_score": 8.94,
+          "avg_score": 8.59,
           "std_dev": 0.0,
-          "min_score": 8.94,
-          "max_score": 8.94
+          "min_score": 8.59,
+          "max_score": 8.59
         },
         {
           "test_case_id": "is_004",
@@ -908,31 +908,31 @@
             {
               "run": 0,
               "error": null,
-              "latency": 2.79,
+              "latency": 3.82,
               "tokens": {
-                "input": 912,
-                "output": 79
+                "input": 1094,
+                "output": 69
               },
-              "cost": 0.00043,
+              "cost": 0.00048,
               "scores": {
-                "completeness": 9.4,
-                "accuracy": 7.9,
+                "completeness": 8.0,
+                "accuracy": 7.5,
                 "format": 7.4,
-                "domain_relevance": 8.4,
-                "clarity": 8.4
+                "domain_relevance": 8.2,
+                "clarity": 9.5
               },
-              "weighted_score": 8.08,
+              "weighted_score": 7.72,
               "validation": {
                 "passed": true,
                 "failures": []
               },
-              "output": "{\"safe_for_work\": true, \"category\": \"borderline\", \"confidence\": 87, \"reason\": \"Good-faith product photo; product clearly visible.\"}"
+              "output": "{\"safe_for_work\": false, \"category\": \"borderline\", \"confidence\": 57, \"reason\": \"Visible person/skin in frame; flagged for review.\"}"
             }
           ],
-          "avg_score": 8.08,
+          "avg_score": 7.72,
           "std_dev": 0.0,
-          "min_score": 8.08,
-          "max_score": 8.08
+          "min_score": 7.72,
+          "max_score": 7.72
         }
       ],
       "errors": 0

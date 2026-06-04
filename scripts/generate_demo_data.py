@@ -289,13 +289,16 @@ def _load_classification_scorer():
     return mod
 
 
-# Per-test-case base probability that a model over-rejects a SAFE image.
-# Higher for the harder false-positive traps (clothed person / shirtless grooming).
-_OVER_REJECT_BASE = {
-    "is_001": 0.00,  # clean label close-up
-    "is_002": 0.00,  # clean bottle label
-    "is_003": 0.10,  # messy mirror selfie, clothed
-    "is_004": 0.28,  # shirtless grooming — the classic false-positive trap
+# Deterministic over-rejection model for the seeded demo: a model over-rejects a
+# SAFE case when its "strictness" (1 - leniency, derived from quality bias) meets
+# the case's threshold. Harder false-positive traps have lower thresholds (more
+# models trip on them). Deterministic — no RNG — so the demo is reproducible and
+# the per-model spread is stable.
+_CASE_BLOCK_THRESHOLD = {
+    "is_001": 1.10,  # clean label close-up — never over-rejected
+    "is_002": 0.70,  # clean bottle label
+    "is_003": 0.42,  # messy mirror selfie, clothed
+    "is_004": 0.18,  # shirtless grooming — the classic false-positive trap
 }
 
 
@@ -316,7 +319,7 @@ def generate_image_safety_report(suite_path: Path, run_id: str, vision_models: l
     for model in vision_models:
         # Map the model's quality bias into a "leniency" (0..1): higher = blocks less.
         bias = MODEL_BIAS.get(model["id"], 0.0)
-        leniency = min(1.0, max(0.0, 0.5 + bias))
+        leniency = min(1.0, max(0.0, 0.42 + bias))
 
         pricing = model.get("pricing", {})
         in_rate = pricing.get("input_per_million", 0)
@@ -324,8 +327,8 @@ def generate_image_safety_report(suite_path: Path, run_id: str, vision_models: l
         test_results = []
         for tc in suite["test_cases"]:
             tc_id = tc["id"]
-            reject_p = _OVER_REJECT_BASE.get(tc_id, 0.05) * (1.0 - leniency)
-            blocked = rng.random() < reject_p
+            strictness = 1.0 - leniency
+            blocked = strictness >= _CASE_BLOCK_THRESHOLD.get(tc_id, 1.10)
             if blocked:
                 verdict = {
                     "safe_for_work": False,
