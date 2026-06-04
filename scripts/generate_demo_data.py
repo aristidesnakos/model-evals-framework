@@ -527,7 +527,19 @@ def _backfill_report(data: dict, models_data: dict) -> None:
 
 
 def from_real_reports(reports_dir: Path) -> bool:
-    files = sorted(reports_dir.glob("*.json"), reverse=True)
+    # This demo dashboard renders quality / classification categories only.
+    # Exclude classification sidecars and safety (jailbreak) reports — the latter
+    # have a different report shape (gate_result, no per-dimension avg_score) that
+    # the quality leaderboard can't summarize.
+    def _is_quality_report(p: Path) -> bool:
+        if p.name.endswith("_classification.json"):
+            return False
+        try:
+            return json.loads(p.read_text()).get("eval_type", "quality") != "safety"
+        except (json.JSONDecodeError, OSError):
+            return False
+
+    files = [f for f in sorted(reports_dir.glob("*.json"), reverse=True) if _is_quality_report(f)]
     if not files:
         return False
 
