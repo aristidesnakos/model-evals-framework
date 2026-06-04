@@ -1,5 +1,7 @@
 {
   "suite_name": "getting_started",
+  "modality": "text",
+  "task_type": "generation",
   "description": "Domain-neutral evaluation suite for verifying the EvalPulse pipeline. Tests summarization, structured output, and reasoning capabilities.",
   "runs_per_test": 1,
   "scoring_weights": {

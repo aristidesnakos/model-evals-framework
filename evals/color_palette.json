@@ -1,5 +1,7 @@
 {
   "suite_name": "color_palette",
+  "modality": "vision",
+  "task_type": "generation",
   "description": "Multimodal color-perception eval: given an image, extract its dominant color palette as hex codes. Accuracy is measured deterministically via CIEDE2000 delta-E against ground-truth hex values and fed into the judge prompt as objective context; judges still score the five standard dimensions. Requires vision-capable models (set \"vision\": true on the model entry in models.json).",
   "runs_per_test": 1,
   "scoring_weights": {

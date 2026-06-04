@@ -16,6 +16,54 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 OUT_DIR = ROOT / "site" / "demo" / "data"
+EVALS_DIR = ROOT / "evals"
+
+
+def suite_meta(suite_name: str) -> dict:
+    """Resolve a suite's presentation facets (modality, task_type).
+
+    Reads evals/<suite_name>.json when present; otherwise infers from the name.
+    These drive the lmarena-style category tabs on the dashboard.
+    """
+    suite_file = EVALS_DIR / f"{suite_name}.json"
+    modality = task_type = None
+    if suite_file.exists():
+        try:
+            s = json.loads(suite_file.read_text())
+            modality = s.get("modality")
+            task_type = s.get("task_type")
+            if modality is None:
+                has_image = any(tc.get("image_path") for tc in s.get("test_cases", []))
+                modality = "vision" if has_image else "text"
+        except (json.JSONDecodeError, OSError):
+            pass
+    if modality is None:
+        modality = "text"
+    if task_type is None:
+        # Heuristic fallback for reports whose suite file is absent.
+        name = suite_name.lower()
+        task_type = "classification" if ("classif" in name or "safety_gate" in name) else "generation"
+    return {"modality": modality, "task_type": task_type}
+
+
+# Per-model quality bias for seeded demo scores (higher-tier models score a touch
+# better). Single source of truth shared by the quality and image-safety
+# synthesizers so the two can't drift apart.
+MODEL_BIAS = {
+    "openai/gpt-5.4-mini":                  0.7,
+    "google/gemini-3.1-flash-lite-preview": 0.2,
+    "qwen/qwen3.5-plus-02-15":              0.4,
+    "mistralai/mistral-small-2603":         0.0,
+    "openai/gpt-5.4-nano":                  0.5,
+    "qwen/qwen3.5-flash-02-23":            -0.1,
+    # Currently-enabled vision models
+    "google/gemini-3.5-flash":              0.6,
+    "google/gemini-3.1-flash-lite":         0.2,
+    "x-ai/grok-4.3":                        0.5,
+    "perceptron/perceptron-mk1":            0.3,
+    "stepfun/step-3.7-flash":               0.1,
+    "minimax/minimax-m3":                   0.0,
+}
 
 
 def weighted_score(scores: dict, weights: dict) -> float:
@@ -33,19 +81,9 @@ def generate_report(suite_path: Path, run_id: str, model_list: list, seed: int) 
     })
     dims = list(weights.keys())
 
-    # Per-model bias: higher-tier models score slightly better
-    model_biases = {
-        "openai/gpt-5.4-mini":                   0.7,
-        "google/gemini-3.1-flash-lite-preview":   0.2,
-        "qwen/qwen3.5-plus-02-15":                0.4,
-        "mistralai/mistral-small-2603":           0.0,
-        "openai/gpt-5.4-nano":                    0.5,
-        "qwen/qwen3.5-flash-02-23":              -0.1,
-    }
-
     results = []
     for model in model_list:
-        bias = model_biases.get(model["id"], 0.0)
+        bias = MODEL_BIAS.get(model["id"], 0.0)
         pricing = model.get("pricing", {})
         input_rate = pricing.get("input_per_million", 0)
         output_rate = pricing.get("output_per_million", 0)
@@ -123,10 +161,13 @@ def build_index(reports: list[tuple[str, dict]]) -> list:
                     "avg": round(sum(scores) / len(scores), 1)
                 })
         model_scores.sort(key=lambda x: x["avg"], reverse=True)
+        meta = suite_meta(data.get("suite_name", ""))
         index.append({
             "filename": filename,
             "run_id": data.get("run_id", ""),
             "suite_name": data.get("suite_name", ""),
+            "modality": meta["modality"],
+            "task_type": meta["task_type"],
             "model_count": len(data.get("results", [])),
             "top_model": model_scores[0] if model_scores else None,
             "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else [0, 0],
@@ -237,6 +278,207 @@ def build_leaderboard(reports: list[tuple[str, dict]]) -> dict:
     }
 
 
+def _load_classification_scorer():
+    """Import scripts/score_image_safety.py by path (scripts/ isn't a package)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "score_image_safety", ROOT / "scripts" / "score_image_safety.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# Per-test-case base probability that a model over-rejects a SAFE image.
+# Higher for the harder false-positive traps (clothed person / shirtless grooming).
+_OVER_REJECT_BASE = {
+    "is_001": 0.00,  # clean label close-up
+    "is_002": 0.00,  # clean bottle label
+    "is_003": 0.10,  # messy mirror selfie, clothed
+    "is_004": 0.28,  # shirtless grooming — the classic false-positive trap
+}
+
+
+def generate_image_safety_report(suite_path: Path, run_id: str, vision_models: list, seed: int) -> dict:
+    """Synthesize a deterministic SAFE-only image_safety run with raw `output`.
+
+    Every committed case is should_pass=true, so the only error a model can make
+    here is over-rejection (a false block of a legitimate photo). Stronger models
+    over-reject less. Output is a strict JSON verdict so the real classification
+    scorer (scripts/score_image_safety.py) can grade it unchanged.
+    """
+    rng = random.Random(seed)
+    suite = json.loads(suite_path.read_text())
+    weights = suite.get("scoring_weights", {})
+    dims = list(weights.keys())
+
+    results = []
+    for model in vision_models:
+        # Map the model's quality bias into a "leniency" (0..1): higher = blocks less.
+        bias = MODEL_BIAS.get(model["id"], 0.0)
+        leniency = min(1.0, max(0.0, 0.5 + bias))
+
+        pricing = model.get("pricing", {})
+        in_rate = pricing.get("input_per_million", 0)
+        out_rate = pricing.get("output_per_million", 0)
+        test_results = []
+        for tc in suite["test_cases"]:
+            tc_id = tc["id"]
+            reject_p = _OVER_REJECT_BASE.get(tc_id, 0.05) * (1.0 - leniency)
+            blocked = rng.random() < reject_p
+            if blocked:
+                verdict = {
+                    "safe_for_work": False,
+                    "category": "borderline" if tc_id == "is_004" else "explicit",
+                    "confidence": rng.randint(55, 80),
+                    "reason": "Visible person/skin in frame; flagged for review.",
+                }
+            else:
+                cat = {"is_001": "clean", "is_002": "clean", "is_003": "messy", "is_004": "borderline"}.get(tc_id, "clean")
+                verdict = {
+                    "safe_for_work": True,
+                    "category": cat,
+                    "confidence": rng.randint(82, 98),
+                    "reason": "Good-faith product photo; product clearly visible.",
+                }
+            # Quality dims (output-contract adherence) — kept for report-shape parity.
+            scores = {d: round(min(10.0, max(1.0, rng.uniform(7.0, 9.5) + bias)), 1) for d in dims}
+            ws = weighted_score(scores, weights) if dims else 0.0
+            latency = round(rng.uniform(0.8, 4.5), 2)
+            inp_tokens = rng.randint(800, 1400)  # image tokens dominate
+            out_tokens = rng.randint(40, 90)
+            cost = round((inp_tokens * in_rate + out_tokens * out_rate) / 1_000_000, 6)
+            run = {
+                "run": 0, "error": None, "latency": latency,
+                "tokens": {"input": inp_tokens, "output": out_tokens}, "cost": cost,
+                "scores": scores, "weighted_score": ws,
+                "validation": {"passed": True, "failures": []},
+                "output": json.dumps(verdict),
+            }
+            test_results.append({
+                "test_case_id": tc_id, "test_case_name": tc["name"],
+                "category": tc["category"], "prompt": tc["prompt"],
+                "reference_answer": tc.get("reference_answer", ""),
+                "runs": [run], "avg_score": ws, "std_dev": 0.0,
+                "min_score": ws, "max_score": ws,
+            })
+        results.append({
+            "model_id": model["id"], "model_name": model["name"],
+            "pricing": pricing, "test_results": test_results, "errors": 0,
+        })
+
+    return {
+        "run_id": run_id, "suite_name": suite["suite_name"],
+        "runs_per_test": 1,
+        "judge_models": ["anthropic/claude-sonnet-4.6", "openai/gpt-5.4"],
+        "results": results,
+    }
+
+
+def _gate_rows(report: dict, classification: dict) -> list:
+    """Join the classification summary with per-model latency/cost from the report."""
+    lat_cost = {}
+    for mr in report.get("results", []):
+        lats, cost = [], 0.0
+        for tr in mr.get("test_results", []):
+            for r in tr.get("runs", []):
+                if r.get("latency"):
+                    lats.append(r["latency"])
+                cost += r.get("cost", 0)
+        lat_cost[mr["model_id"]] = {
+            "lat": round(sum(lats) / len(lats), 1) if lats else 0.0,
+            "cost": round(cost, 4),
+        }
+    rows = []
+    for m in classification.get("models", []):
+        lc = lat_cost.get(m["model_id"], {"lat": 0.0, "cost": 0.0})
+        rows.append({
+            "id": m["model_id"], "name": m["model_name"],
+            "n": m["scored_cases"], "tp": m["tp"], "tn": m["tn"],
+            "fp": m["fp"], "fn": m["fn"],
+            "good_total": m["good_total"], "unsafe_total": m["unsafe_total"],
+            "accuracy": m["accuracy"], "precision": m["precision"], "recall": m["recall"],
+            "good_reject_rate": m["good_reject_rate"],
+            "unsafe_pass_rate": m["unsafe_pass_rate"],
+            "refused": m["refused"], "malformed": m["malformed"],
+            "lat": lc["lat"], "cost": lc["cost"],
+        })
+    # Best gate first: lowest good-reject, then highest accuracy.
+    rows.sort(key=lambda r: ((r["good_reject_rate"] if r["good_reject_rate"] is not None else 1.0),
+                             -(r["accuracy"] or 0)))
+    return rows
+
+
+def build_categories(pairs: list, gate_data: dict | None = None) -> list:
+    """Group runs into lmarena-style category tabs by (modality, task_type).
+
+    Quality categories carry the standard 1-10 aggregated leaderboard; the
+    vision classification-gate category carries confusion-matrix metrics.
+    """
+    groups: dict[tuple, list] = {}
+    for filename, data in pairs:
+        meta = suite_meta(data.get("suite_name", ""))
+        groups.setdefault((meta["modality"], meta["task_type"]), []).append((filename, data))
+
+    label_word = {"text": "Text", "vision": "Vision",
+                  "generation": "Generation", "classification": "Classification"}
+    categories = []
+    for (modality, task_type), grp in groups.items():
+        suites = sorted({d.get("suite_name", "") for _, d in grp})
+        is_gate = gate_data is not None and gate_data["suite_name"] in suites
+        cat = {
+            "key": f"{modality}-{task_type}",
+            "label": f"{label_word[modality]} · {label_word[task_type]}",
+            "modality": modality, "task_type": task_type,
+            "suites": suites,
+            "reportCount": len(grp),
+            "productionLatencyCutoff": PRODUCTION_LATENCY_CUTOFF,
+            "metric_kind": "classification_gate" if is_gate else "quality",
+        }
+        if is_gate:
+            cat["gate"] = _gate_rows(gate_data["report"], gate_data["classification"])
+            cat["gateNote"] = (
+                "Committed set is SAFE-only, so unsafe_total=0 and the dangerous "
+                "Unsafe-Pass rate is not measurable here (shown as —). Only the "
+                "over-rejection side (Good-Reject) is graded. Add a private, "
+                "access-controlled unsafe set to measure the gate FNR."
+            )
+        else:
+            lb = build_leaderboard(grp)
+            cat["leaderboard"] = lb["aggregated"]
+            cat["calibration"] = lb["calibration"]
+            cat["testCaseCount"] = lb["testCaseCount"]
+        categories.append(cat)
+
+    # Stable, readable order: text-gen, text-classification, vision-*, then rest.
+    order = {"text-generation": 0, "text-classification": 1,
+             "vision-classification": 2, "vision-generation": 3}
+    categories.sort(key=lambda c: order.get(c["key"], 99))
+    return categories
+
+
+def compose_leaderboard(pairs_sorted: list, gate_data: dict | None = None) -> dict:
+    """Build the full leaderboard payload: lmarena-style `categories` plus legacy
+    `aggregated`/`calibration` fields (over quality runs) for back-compat.
+
+    Shared by both the synthetic (main) and --from-reports build paths so the two
+    can't diverge in shape.
+    """
+    categories = build_categories(pairs_sorted, gate_data)
+    gate_suite = gate_data["suite_name"] if gate_data else None
+    quality_pairs = [(f, d) for f, d in pairs_sorted if d.get("suite_name") != gate_suite]
+    legacy = (build_leaderboard(quality_pairs) if quality_pairs
+              else {"aggregated": [], "calibration": [], "reportCount": 0, "testCaseCount": 0})
+    return {
+        "categories": categories,
+        "productionLatencyCutoff": PRODUCTION_LATENCY_CUTOFF,
+        "aggregated": legacy["aggregated"],
+        "calibration": legacy["calibration"],
+        "reportCount": legacy["reportCount"],
+        "testCaseCount": legacy["testCaseCount"],
+    }
+
+
 def _backfill_report(data: dict, models_data: dict) -> None:
     """Add cost and prompt fields to reports that predate those features."""
     pricing_map = {
@@ -301,10 +543,20 @@ def from_real_reports(reports_dir: Path) -> bool:
     (OUT_DIR / "index.json").write_text(json.dumps(index, indent=2))
     print(f"  Wrote index.json ({len(index)} entries)")
 
-    leaderboard = build_leaderboard(pairs)
+    # Real reports may include an image_safety run; if a matching classification
+    # sidecar exists alongside it, wire it into the gate category.
+    gate_data = None
+    for filename, data in pairs:
+        if suite_meta(data.get("suite_name", "")) == {"modality": "vision", "task_type": "classification"}:
+            sidecar = reports_dir / f"{Path(filename).stem}_classification.json"
+            if sidecar.exists():
+                gate_data = {"suite_name": data["suite_name"], "report": data,
+                             "classification": json.loads(sidecar.read_text())}
+            break
+
+    leaderboard = compose_leaderboard(list(reversed(pairs)), gate_data)
     (OUT_DIR / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2))
-    print(f"  Wrote leaderboard.json ({len(leaderboard['aggregated'])} models, "
-          f"{len(leaderboard['calibration'])} cross-run calibrations)")
+    print(f"  Wrote leaderboard.json ({len(leaderboard['categories'])} categories)")
     return True
 
 
@@ -321,22 +573,44 @@ def main():
 
     models_data = json.loads((ROOT / "models.json").read_text())
     models = [m for m in models_data["models"] if m.get("enabled", True)]
+    vision_models = [m for m in models if m.get("vision")]
 
+    # Quality suites spanning two categories: Text·Generation and Text·Classification.
     suites = [
-        (ROOT / "evals" / "getting_started.json", "20260330_120000", 42),
-        (ROOT / "evals" / "suite.json",            "20260315_090000", 99),
+        (ROOT / "evals" / "getting_started.json",   "20260330_120000", 42),
+        (ROOT / "evals" / "suite.json",             "20260315_090000", 99),
+        (ROOT / "evals" / "school_classifier.json", "20260416_195602", 7),
     ]
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     pairs = []
     for suite_path, run_id, seed in suites:
+        if not suite_path.exists():
+            continue
         report = generate_report(suite_path, run_id, models, seed)
-        suite_name = report["suite_name"]
-        filename = f"{suite_name}_{run_id}.json"
-        dest = OUT_DIR / filename
-        dest.write_text(json.dumps(report, indent=2))
+        filename = f"{report['suite_name']}_{run_id}.json"
+        (OUT_DIR / filename).write_text(json.dumps(report, indent=2))
         pairs.append((filename, report))
         print(f"  Wrote {filename}")
+
+    # Vision·Classification: SAFE-only image_safety run, graded by the real scorer.
+    gate_data = None
+    is_suite = ROOT / "evals" / "image_safety.json"
+    if is_suite.exists() and vision_models:
+        is_report = generate_image_safety_report(is_suite, "20260603_140000", vision_models, 2026)
+        is_filename = f"{is_report['suite_name']}_20260603_140000.json"
+        (OUT_DIR / is_filename).write_text(json.dumps(is_report, indent=2))
+        pairs.append((is_filename, is_report))
+        print(f"  Wrote {is_filename}")
+
+        scorer = _load_classification_scorer()
+        labels = json.loads((EVALS_DIR / "image_safety_labels.json").read_text())
+        classification = scorer.score_report(is_report, labels)
+        (OUT_DIR / f"{is_report['suite_name']}_20260603_140000_classification.json").write_text(
+            json.dumps(classification, indent=2))
+        gate_data = {"suite_name": is_report["suite_name"], "report": is_report,
+                     "classification": classification}
+        print(f"  Wrote {is_report['suite_name']}_20260603_140000_classification.json")
 
     # index.json sorted newest first (matches dashboard expectation)
     pairs_sorted = list(reversed(pairs))
@@ -344,10 +618,11 @@ def main():
     (OUT_DIR / "index.json").write_text(json.dumps(index, indent=2))
     print(f"  Wrote index.json ({len(index)} entries)")
 
-    leaderboard = build_leaderboard(pairs_sorted)
+    # Categorized leaderboard (lmarena-style tabs) + legacy back-compat fields.
+    leaderboard = compose_leaderboard(pairs_sorted, gate_data)
     (OUT_DIR / "leaderboard.json").write_text(json.dumps(leaderboard, indent=2))
-    print(f"  Wrote leaderboard.json ({len(leaderboard['aggregated'])} models, "
-          f"{len(leaderboard['calibration'])} cross-run calibrations)")
+    print(f"  Wrote leaderboard.json ({len(leaderboard['categories'])} categories: "
+          f"{', '.join(c['key'] for c in leaderboard['categories'])})")
     print(f"\nDemo data ready in {OUT_DIR.relative_to(ROOT)}/")
 
 

@@ -1,5 +1,7 @@
 {
   "suite_name": "school_classifier",
+  "modality": "text",
+  "task_type": "classification",
   "description": "Evaluates models on classifying South African school emails into 6 categories (homework, sports, schedule_change, event, admin, announcement). Uses the exact production prompt from Setian's IngestionService. Accuracy target: 85%+. Tests include edge cases at category boundaries.",
   "runs_per_test": 3,
   "scoring_weights": {

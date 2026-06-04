@@ -1,44 +1,66 @@
 [
   {
-    "filename": "swms_safety_generator_20260410_162637.json",
-    "run_id": "20260410_162637",
-    "suite_name": "swms_safety_generator",
-    "model_count": 5,
-    "top_model": {
-      "name": "GPT-5.4 Nano",
-      "avg": 8.1
-    },
-    "score_range": [
-      7.3,
-      8.1
-    ]
-  },
-  {
-    "filename": "swms_safety_generator_20260330_183136.json",
-    "run_id": "20260330_183136",
-    "suite_name": "swms_safety_generator",
+    "filename": "image_safety_20260603_140000.json",
+    "run_id": "20260603_140000",
+    "suite_name": "image_safety",
+    "modality": "vision",
+    "task_type": "classification",
     "model_count": 6,
     "top_model": {
-      "name": "GPT-5.4 Mini",
-      "avg": 8.1
+      "name": "Grok 4.3",
+      "avg": 9.3
     },
     "score_range": [
-      7.0,
-      8.1
+      8.4,
+      9.3
     ]
   },
   {
     "filename": "school_classifier_20260416_195602.json",
     "run_id": "20260416_195602",
     "suite_name": "school_classifier",
-    "model_count": 5,
+    "modality": "text",
+    "task_type": "classification",
+    "model_count": 6,
     "top_model": {
-      "name": "GPT-5.4 Mini",
-      "avg": 10.0
+      "name": "Gemini 3.5 Flash",
+      "avg": 7.6
     },
     "score_range": [
-      10.0,
-      10.0
+      7.0,
+      7.6
+    ]
+  },
+  {
+    "filename": "regulatory_compliance_20260315_090000.json",
+    "run_id": "20260315_090000",
+    "suite_name": "regulatory_compliance",
+    "modality": "text",
+    "task_type": "generation",
+    "model_count": 6,
+    "top_model": {
+      "name": "Gemini 3.5 Flash",
+      "avg": 7.6
+    },
+    "score_range": [
+      6.9,
+      7.6
+    ]
+  },
+  {
+    "filename": "getting_started_20260330_120000.json",
+    "run_id": "20260330_120000",
+    "suite_name": "getting_started",
+    "modality": "text",
+    "task_type": "generation",
+    "model_count": 6,
+    "top_model": {
+      "name": "Grok 4.3",
+      "avg": 8.1
+    },
+    "score_range": [
+      7.0,
+      8.1
     ]
   }
 ]
