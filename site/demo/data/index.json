@@ -8,11 +8,11 @@
     "model_count": 6,
     "top_model": {
       "name": "Grok 4.3",
-      "avg": 9.3
+      "avg": 9.0
     },
     "score_range": [
-      8.4,
-      9.3
+      8.2,
+      9.0
     ]
   },
   {
