@@ -5,30 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EvalPulse Demo Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f1f5f9; --surface: #ffffff; --text: #1e293b; --muted: #64748b;
-  --border: #e2e8f0; --accent: #3b82f6; --accent-light: #eff6ff;
-  --green: #22c55e; --amber: #f59e0b; --red: #ef4444;
-  --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  /* Warm editorial canvas — tokens remapped so existing classes inherit the new register */
+  --bg: #F4EEE2; --surface: #FBF8F1; --text: #1A1712; --muted: #5C5446;
+  --border: #DAD1BF; --accent: #2563EB; --accent-light: #E4ECFB;
+  --accent-dark: #1D4ED8; --paper-2: #ECE3D2;
+  --ink-faint: #948B78; --panel: #15120E;
+  --green: #2F7D4F; --amber: #B07A1E; --red: #B23A2E;
+  --radius: 2px;
+  --shadow: 0 1px 2px rgba(26,23,18,0.05);
+  --font-display: "Libre Caslon Display", Georgia, serif;
+  --font-serif: "Libre Caslon Text", Georgia, serif;
+  --font-sans: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, Menlo, monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
-.demo-banner { background: #1e293b; color: #e2e8f0; text-align: center; padding: 10px 24px; font-size: 13px; }
-.demo-banner a { color: #93c5fd; text-decoration: none; font-weight: 500; }
-.demo-banner a:hover { text-decoration: underline; }
-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
-header h1 { font-size: 18px; font-weight: 700; }
+body { font-family: var(--font-sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.55; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: var(--accent); color: var(--bg); }
+.demo-banner { background: var(--panel); color: rgba(244,238,226,0.8); text-align: center; padding: 10px 24px; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
+.demo-banner a { color: #93b4f5; text-decoration: underline; text-underline-offset: 3px; font-weight: 500; }
+.demo-banner a:hover { color: #b9cdf8; }
+header { background: rgba(244,238,226,0.85); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(26,23,18,0.15); padding: 16px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 10; }
+header h1 { font-family: var(--font-display); font-size: 24px; font-weight: 400; letter-spacing: -0.01em; }
 header nav { display: flex; gap: 8px; margin-left: auto; }
-header nav a, header nav button { padding: 6px 14px; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--surface); transition: all 0.15s; }
+header nav a, header nav button { padding: 7px 14px; border-radius: var(--radius); text-decoration: none; color: var(--muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer; border: 1px solid var(--border); background: transparent; transition: all 0.15s; }
 header nav a:hover, header nav button:hover { color: var(--accent); border-color: var(--accent); }
 header nav a.active { color: var(--accent); background: var(--accent-light); border-color: var(--accent); }
-#app { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+#app { max-width: 1200px; margin: 28px auto; padding: 0 24px; }
 
 /* Cards */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
-.card-primary { border-left: 3px solid var(--accent); }
-.card h2 { font-size: 15px; font-weight: 600; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.card-primary { border-left: 2px solid var(--accent); }
+.card h2 { font-family: var(--font-serif); font-size: 17px; font-weight: 700; }
 
 /* Section header: title left, inline legend right */
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
@@ -44,11 +56,12 @@ header nav a.active { color: var(--accent); background: var(--accent-light); bor
 .inline-legend .key-divider { color: var(--border); }
 
 /* Hero stats */
-.hero-stats { display: flex; margin: 16px 0 14px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.hero-stat { flex: 1; padding: 14px 16px; text-align: center; border-right: 1px solid var(--border); }
+.hero-stats { display: flex; margin: 16px 0 14px; border-top: 2px solid var(--text); border-bottom: 1px solid var(--border); }
+.hero-stat { flex: 1; padding: 16px; text-align: center; border-right: 1px solid var(--border); }
 .hero-stat:last-child { border-right: none; }
-.hero-num { display: block; font-size: 26px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.hero-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-top: 3px; }
+.hero-num { display: block; font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 1.0; font-variant-numeric: tabular-nums; }
+.hero-num.score { font-family: var(--font-mono); font-weight: 500; }
+.hero-label { display: block; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-faint); margin-top: 6px; }
 
 /* Scale note */
 .scale-note { font-size: 10px; font-weight: 400; color: var(--muted); letter-spacing: 0; text-transform: none; }
@@ -58,11 +71,11 @@ header nav a.active { color: var(--accent); background: var(--accent-light); bor
 
 /* Tables */
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { text-align: left; padding: 9px 10px; border-bottom: 2px solid var(--text); font-family: var(--font-mono); font-weight: 500; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--accent-light); }
-.score { font-weight: 600; font-variant-numeric: tabular-nums; }
+.score { font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums; }
 .score-high { color: var(--green); }
 .score-mid { color: var(--amber); }
 .score-low { color: var(--red); }
@@ -76,9 +89,24 @@ tr:hover td { background: var(--accent-light); }
 .category-group-stats { font-size: 12px; color: var(--muted); }
 
 /* Badges */
-.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-.badge-suite { background: #ede9fe; color: #7c3aed; }
-.badge-cat { background: #e0f2fe; color: #0284c7; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid transparent; }
+.badge-suite { background: transparent; color: var(--accent); border-color: rgba(37,99,235,0.35); }
+.badge-cat { background: var(--paper-2, #ECE3D2); color: var(--muted); border-color: var(--border); }
+.badge-mod { background: transparent; color: var(--muted); border-color: var(--border); }
+.badge-mod-vision { background: transparent; color: var(--accent-dark, #1D4ED8); border-color: rgba(37,99,235,0.3); }
+.badge-mod-text { background: transparent; color: var(--muted); border-color: var(--border); }
+
+/* Category tabs (leaderboard selector) */
+.cat-tabs { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.cat-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); cursor: pointer; transition: all 0.15s; min-width: 150px; }
+.cat-tab:hover { border-color: var(--accent); }
+.cat-tab.active { border-color: var(--accent); background: var(--accent-light); }
+.cat-tab-mod { font-family: var(--font-mono); font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.14em; padding: 1px 6px; border-radius: var(--radius); border: 1px solid var(--border); color: var(--muted); }
+.cat-mod-vision { color: var(--accent); border-color: rgba(37,99,235,0.3); }
+.cat-mod-text { color: var(--muted); }
+.cat-tab-label { font-family: var(--font-serif); font-size: 15px; font-weight: 700; color: var(--text); }
+.cat-tab-count { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.cat-tab.active .cat-tab-label { color: var(--accent); }
 
 /* Meta */
 .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
@@ -96,7 +124,7 @@ tr:hover td { background: var(--accent-light); }
 .dim-callout strong { color: var(--text); }
 
 /* Winner badge */
-.winner-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; background: #dcfce7; color: #166534; margin-left: 6px; vertical-align: middle; }
+.winner-badge { display: inline-block; padding: 1px 7px; border-radius: var(--radius); font-family: var(--font-mono); font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; background: transparent; color: var(--green); border: 1px solid rgba(47,125,79,0.4); margin-left: 6px; vertical-align: middle; }
 
 /* Charts */
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -104,14 +132,14 @@ tr:hover td { background: var(--accent-light); }
 .scatter-container { position: relative; height: 440px; }
 
 /* Calibration / methodology note */
-.calibration-note { font-size: 12px; color: var(--muted); margin-top: 14px; padding: 10px 12px; background: var(--bg); border-radius: 6px; border-left: 3px solid var(--accent); line-height: 1.55; }
+.calibration-note { font-size: 12.5px; color: var(--muted); margin-top: 14px; padding: 12px 14px; background: var(--bg); border-radius: var(--radius); border-left: 2px solid var(--accent); line-height: 1.6; }
 .calibration-note strong { color: var(--text); }
 
 /* Leaderboard badges */
-.badge-viable { background: #dcfce7; color: #166534; }
-.badge-slow { background: #fef3c7; color: #92400e; }
-.badge-fail { background: #fee2e2; color: #991b1b; }
-.badge-runs { background: #f1f5f9; color: #475569; }
+.badge-viable { background: transparent; color: var(--green); border-color: rgba(47,125,79,0.4); }
+.badge-slow { background: transparent; color: var(--amber); border-color: rgba(176,122,30,0.4); }
+.badge-fail { background: transparent; color: var(--red); border-color: rgba(178,58,46,0.4); }
+.badge-runs { background: transparent; color: var(--muted); border-color: var(--border); }
 
 /* Axis caption above scatter (helps non-technical readers) */
 .scatter-caption { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: center; }
@@ -127,7 +155,7 @@ details .detail-content { padding: 8px 0 4px; }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
-.empty-state h2 { font-size: 20px; color: var(--text); margin-bottom: 8px; }
+.empty-state h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; color: var(--text); margin-bottom: 8px; }
 
 /* Compare button */
 .btn-compare { background: var(--accent); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; opacity: 0.5; pointer-events: none; }
@@ -149,7 +177,7 @@ input[type=checkbox] { accent-color: var(--accent); }
 </head>
 <body>
 <div class="demo-banner">
-  This is a live demo with real evaluation data. &nbsp;<a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">Install EvalPulse</a> to run evaluations against your own prompts and models.
+  This is a demo with illustrative, seeded data across text and vision eval categories. &nbsp;<a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">Install EvalPulse</a> to run evaluations against your own prompts and models.
 </div>
 <header>
   <h1>EvalPulse</h1>
@@ -189,7 +217,7 @@ function stdColor(v) { return v < 0.5 ? 'var(--green)' : v < 1.0 ? 'var(--amber)
 function heatBg(v) { return v >= 7 ? '#dcfce7' : v >= 5 ? '#fef9c3' : '#fee2e2'; }
 function heatFg(v) { return v >= 7 ? '#166534' : v >= 5 ? '#854d0e' : '#991b1b'; }
 
-const COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+const COLORS = ['#2563EB','#2F7D4F','#B07A1E','#B23A2E','#8b5cf6','#ec4899','#14b8a6','#f97316'];
 const DIMS    = ['completeness','accuracy','format','domain_relevance','clarity'];
 const DLABELS = ['Complete','Accuracy','Format','Domain','Clarity'];
 
@@ -271,13 +299,57 @@ async function fetchLeaderboard() {
 
 // --- RENDERERS ---
 
+// Category tab state for the lmarena-style leaderboard selector.
+let selectedCat = null;
+function selectCat(k) { selectedCat = k; renderLeaderboard(); }
+
 async function renderLeaderboard() {
   updateNav('leaderboard');
   const app = document.getElementById('app');
+  const data = await fetchLeaderboard();
+  let cats = data.categories || [];
 
-  const { aggregated = [], calibration = [], reportCount = 0, testCaseCount = 0 } = await fetchLeaderboard();
-  if (!aggregated.length) {
+  // Back-compat: a leaderboard.json without `categories` (older build) still
+  // renders as a single quality category from the legacy aggregated fields.
+  if (!cats.length && (data.aggregated || []).length) {
+    cats = [{
+      key: 'all', label: 'All Runs', modality: 'text', task_type: 'generation',
+      metric_kind: 'quality', suites: [], reportCount: data.reportCount || 0,
+      leaderboard: data.aggregated, calibration: data.calibration || [],
+      testCaseCount: data.testCaseCount || 0,
+    }];
+  }
+  if (!cats.length) {
     app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>python evalpulse.py --run-eval</code></p></div>';
+    return;
+  }
+  if (!selectedCat || !cats.find(c => c.key === selectedCat)) selectedCat = cats[0].key;
+  const cat = cats.find(c => c.key === selectedCat);
+
+  // Category tab bar (modality · task) — pick the leaderboard for your task.
+  const tabs = cats.map(c => `
+    <button class="cat-tab ${c.key === selectedCat ? 'active' : ''}" onclick="selectCat('${c.key}')">
+      <span class="cat-tab-mod cat-mod-${c.modality}">${c.modality === 'vision' ? 'Vision' : 'Text'}</span>
+      <span class="cat-tab-label">${c.label.split(' · ')[1] || c.label}</span>
+      <span class="cat-tab-count">${c.reportCount} run${c.reportCount > 1 ? 's' : ''}</span>
+    </button>`).join('');
+  app.innerHTML = `<div class="cat-tabs">${tabs}</div><div id="cat-body"></div>`;
+  const body = document.getElementById('cat-body');
+
+  if (cat.metric_kind === 'classification_gate') {
+    renderGateCategory(body, cat);
+  } else {
+    renderQualityCategory(body, cat);
+  }
+}
+
+function renderQualityCategory(app, cat) {
+  const aggregated = cat.leaderboard || [];
+  const calibration = cat.calibration || [];
+  const reportCount = cat.reportCount || 0;
+  const testCaseCount = cat.testCaseCount || 0;
+  if (!aggregated.length) {
+    app.innerHTML = '<div class="empty-state"><h2>No data in this category</h2></div>';
     return;
   }
 
@@ -287,7 +359,7 @@ async function renderLeaderboard() {
   // Hero
   let html = `<div class="card">
     <div class="meta">
-      <span><strong>Suite</strong> <span class="badge badge-suite">swms_safety_generator</span></span>
+      <span><strong>Suite${cat.suites.length > 1 ? 's' : ''}</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
       <span><strong>Runs aggregated</strong> ${reportCount}</span>
       <span><strong>Test cases</strong> ${testCaseCount}</span>
       <span><strong>Production cutoff</strong> &le;${PRODUCTION_LATENCY_CUTOFF}s latency</span>
@@ -354,7 +426,7 @@ async function renderLeaderboard() {
     </tr></thead><tbody>`;
   aggregated.forEach((m, i) => {
     const viable = m.productionViable
-      ? `<span class="badge badge-viable">&check; Viable</span>`
+      ? `<span class="badge badge-viable">Viable</span>`
       : m.lat <= 60
         ? `<span class="badge badge-slow">Batch only</span>`
         : `<span class="badge badge-fail">Too slow</span>`;
@@ -380,7 +452,7 @@ async function renderLeaderboard() {
   const yMax = Math.min(10, Math.ceil((Math.max(...scores) + 0.5) * 2) / 2);
   const xMax = Math.ceil((Math.max(...lats) + 10) / 10) * 10;
 
-  const pointColor = m => m.lat <= PRODUCTION_LATENCY_CUTOFF ? '#22c55e' : m.lat <= 60 ? '#f59e0b' : '#ef4444';
+  const pointColor = m => m.lat <= PRODUCTION_LATENCY_CUTOFF ? '#2F7D4F' : m.lat <= 60 ? '#B07A1E' : '#B23A2E';
 
   // Custom plugin: draw model name next to each point and a "15s cutoff" annotation
   const scatterLabels = {
@@ -393,7 +465,7 @@ async function renderLeaderboard() {
       // Model-name labels
       ctx.save();
       ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#1e293b';
+      ctx.fillStyle = '#1A1712';
       ctx.textBaseline = 'middle';
       meta.data.forEach((pt, i) => {
         const d = chart.data.datasets[0].data[i];
@@ -414,7 +486,7 @@ async function renderLeaderboard() {
       const xPx = scales.x.getPixelForValue(PRODUCTION_LATENCY_CUTOFF);
       ctx.save();
       ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = '#B23A2E';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(`${PRODUCTION_LATENCY_CUTOFF}s production cutoff`, xPx + 4, chartArea.top + 4);
@@ -435,13 +507,13 @@ async function renderLeaderboard() {
           pointRadius: 8,
           pointHoverRadius: 11,
           pointBorderWidth: 2,
-          pointBorderColor: '#ffffff',
+          pointBorderColor: '#FBF8F1',
         },
         {
           type: 'line',
           label: 'Cutoff',
           data: [{ x: PRODUCTION_LATENCY_CUTOFF, y: yMin }, { x: PRODUCTION_LATENCY_CUTOFF, y: yMax }],
-          borderColor: '#ef4444',
+          borderColor: '#B23A2E',
           borderWidth: 2,
           borderDash: [6, 4],
           pointRadius: 0,
@@ -457,17 +529,17 @@ async function renderLeaderboard() {
       scales: {
         x: {
           type: 'linear',
-          title: { display: true, text: 'Avg Latency (seconds) \u2192 slower', font: { size: 12, weight: '600' }, color: '#64748b' },
+          title: { display: true, text: 'Avg Latency (seconds) \u2192 slower', font: { size: 12, weight: '600' }, color: '#5C5446' },
           min: 0,
           max: xMax,
-          grid: { color: '#f1f5f9' },
+          grid: { color: '#EAE0CE' },
           ticks: { stepSize: xMax > 100 ? 20 : 10, font: { size: 11 } }
         },
         y: {
-          title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
+          title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#5C5446' },
           min: yMin,
           max: yMax,
-          grid: { color: '#f1f5f9' },
+          grid: { color: '#EAE0CE' },
           ticks: { stepSize: 0.5, font: { size: 11 } }
         }
       },
@@ -495,7 +567,7 @@ async function renderLeaderboard() {
     const cyMax = Math.min(10, Math.ceil((Math.max(...cScores) + 0.5) * 2) / 2);
     const cxMax = +(Math.max(...cCosts) * 1.3).toFixed(4) || 0.01;
 
-    const costPointColor = m => m.avg >= 7 ? '#22c55e' : m.avg >= 5 ? '#f59e0b' : '#ef4444';
+    const costPointColor = m => m.avg >= 7 ? '#2F7D4F' : m.avg >= 5 ? '#B07A1E' : '#B23A2E';
 
     const costScatterLabels = {
       id: 'costScatterLabels',
@@ -505,7 +577,7 @@ async function renderLeaderboard() {
         if (!meta) return;
         ctx.save();
         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#1e293b';
+        ctx.fillStyle = '#1A1712';
         ctx.textBaseline = 'middle';
         meta.data.forEach((pt, i) => {
           const d = chart.data.datasets[0].data[i];
@@ -530,7 +602,7 @@ async function renderLeaderboard() {
           label: 'Models',
           data: costData.map(m => ({ x: m.cost, y: m.avg, model: m.name })),
           backgroundColor: costData.map(costPointColor),
-          borderColor: '#ffffff',
+          borderColor: '#FBF8F1',
           pointRadius: 8,
           pointHoverRadius: 11,
           pointBorderWidth: 2,
@@ -542,14 +614,14 @@ async function renderLeaderboard() {
         scales: {
           x: {
             type: 'linear', min: 0, max: cxMax,
-            title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#64748b' },
-            grid: { color: '#f1f5f9' },
+            title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#5C5446' },
+            grid: { color: '#EAE0CE' },
             ticks: { callback: v => '$' + v.toFixed(3) }
           },
           y: {
             min: cyMin, max: cyMax,
-            title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
-            grid: { color: '#f1f5f9' },
+            title: { display: true, text: 'Avg Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#5C5446' },
+            grid: { color: '#EAE0CE' },
             ticks: { stepSize: 0.5 }
           }
         },
@@ -567,6 +639,99 @@ async function renderLeaderboard() {
       }
     });
   }
+}
+
+// --- Classification-gate category (vision safety) ---
+function fmtRate(v) {
+  return v == null ? '<span style="color:var(--muted)">&mdash;</span>' : (v * 100).toFixed(0) + '%';
+}
+// goodLow=true: lower value is better (error rates); false: higher is better (accuracy/precision).
+function rateColor(v, goodLow) {
+  if (v == null) return 'var(--muted)';
+  const bad = goodLow ? v : 1 - v;
+  return bad <= 0.05 ? 'var(--green)' : bad <= 0.2 ? 'var(--amber)' : 'var(--red)';
+}
+
+function renderGateCategory(app, cat) {
+  const rows = cat.gate || [];
+  if (!rows.length) { app.innerHTML = '<div class="empty-state"><h2>No gate data in this category</h2></div>'; return; }
+  const n = rows.length;
+  const avgAcc = rows.reduce((a, r) => a + (r.accuracy || 0), 0) / n;
+  const bestRej = Math.min(...rows.map(r => r.good_reject_rate == null ? 1 : r.good_reject_rate));
+  const unsafeMeasurable = rows.some(r => r.unsafe_total > 0);
+
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
+      <span><strong>Task</strong> binary safety gate (pass / block)</span>
+      <span><strong>Cases</strong> ${rows[0].n}/model</span>
+      <span><strong>Positive class</strong> should_pass</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num">${n}</span><span class="hero-label">Vision Models</span></div>
+      <div class="hero-stat"><span class="hero-num">${(avgAcc * 100).toFixed(0)}%</span><span class="hero-label">Avg Accuracy</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--green)">${(bestRej * 100).toFixed(0)}%</span><span class="hero-label">Best Good-Reject</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--muted)">${unsafeMeasurable ? 'Yes' : '—'}</span><span class="hero-label">Unsafe-Pass Measurable</span></div>
+    </div>
+    <div class="calibration-note"><strong>SAFE-only set.</strong> ${cat.gateNote || ''}</div>
+  </div>`;
+
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Over-Rejection (Good-Reject Rate)</h2>
+      <div class="inline-legend">Lower is better &middot; fraction of legitimate photos wrongly blocked</div>
+    </div>
+    <div class="chart-container" style="height:${Math.max(180, n * 52)}px"><canvas id="gate-bar"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="section-header">
+      <h2>Classification Leaderboard</h2>
+      <div class="inline-legend">Positive = should_pass &middot; refusals/malformed count as BLOCK</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Accuracy</th>
+      <th>Good-Reject <span class="scale-note">(FN/good)</span></th>
+      <th>Unsafe-Pass <span class="scale-note">(FP/unsafe)</span></th>
+      <th>Precision</th><th>Recall</th>
+      <th>TP/TN/FP/FN</th><th>Latency</th><th>Cost</th>
+    </tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i + 1}</td>
+      <td style="font-weight:500">${r.name}</td>
+      <td style="color:${rateColor(r.accuracy, false)};font-weight:600">${fmtRate(r.accuracy)}</td>
+      <td style="color:${rateColor(r.good_reject_rate, true)};font-weight:600">${fmtRate(r.good_reject_rate)}</td>
+      <td style="color:${r.unsafe_pass_rate == null ? 'var(--muted)' : rateColor(r.unsafe_pass_rate, true)};font-weight:600">${fmtRate(r.unsafe_pass_rate)}</td>
+      <td>${fmtRate(r.precision)}</td>
+      <td>${fmtRate(r.recall)}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--muted)">${r.tp}/${r.tn}/${r.fp}/${r.fn}</td>
+      <td style="font-variant-numeric:tabular-nums">${r.lat}s</td>
+      <td style="font-variant-numeric:tabular-nums">${fmtCost(r.cost || 0)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  app.innerHTML = html;
+
+  new Chart(document.getElementById('gate-bar'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.name),
+      datasets: [{
+        data: rows.map(r => +(((r.good_reject_rate == null ? 0 : r.good_reject_rate)) * 100).toFixed(1)),
+        backgroundColor: rows.map(r => { const v = r.good_reject_rate || 0; return v <= 0.05 ? '#2F7D4F' : v <= 0.2 ? '#B07A1E' : '#B23A2E'; }),
+        borderRadius: 4, barThickness: 28,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: 0, suggestedMax: 50, grid: { color: '#EAE0CE' }, ticks: { callback: v => v + '%' } },
+        y: { grid: { display: false } }
+      },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'Good-Reject: ' + ctx.raw + '%' } } }
+    }
+  });
 }
 
 async function renderRunsList() {
@@ -590,7 +755,11 @@ async function renderRunsList() {
     return `<tr>
       <td><input type="checkbox" data-file="${r.filename}" onchange="toggleSelect(this)" ${selected.has(r.filename)?'checked':''}></td>
       <td><a href="#/run/${r.filename}" style="color:var(--accent);text-decoration:none;font-weight:500">${fmtDate(r.run_id)}</a></td>
-      <td><span class="badge badge-suite">${r.suite_name}</span></td>
+      <td>
+        <span class="badge badge-suite">${r.suite_name}</span>
+        ${r.modality ? `<span class="badge badge-mod badge-mod-${r.modality}">${r.modality === 'vision' ? 'vision' : 'text'}</span>` : ''}
+        ${r.task_type ? `<span class="badge badge-cat">${r.task_type}</span>` : ''}
+      </td>
       <td style="text-align:center">${r.model_count}</td>
       <td>${r.top_model ? `<span class="score ${scoreClass(r.top_model.avg)}">${r.top_model.avg}</span> <span style="color:var(--muted);font-size:12px">${r.top_model.name}</span>` : '\u2014'}</td>
       <td>
@@ -824,7 +993,7 @@ async function renderRun(filename) {
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         scales: {
-          x: { min: 0, max: 10, grid: { color: '#f1f5f9' }, ticks: { stepSize: 2 } },
+          x: { min: 0, max: 10, grid: { color: '#EAE0CE' }, ticks: { stepSize: 2 } },
           y: { grid: { display: false } }
         },
         plugins: {
@@ -835,7 +1004,7 @@ async function renderRun(filename) {
       data: {
         labels: summaries.map(m => m.name),
         datasets: [{ data: summaries.map(m => m.avg),
-          backgroundColor: summaries.map(m => m.avg>=7?'#22c55e':m.avg>=5?'#f59e0b':'#ef4444'),
+          backgroundColor: summaries.map(m => m.avg>=7?'#2F7D4F':m.avg>=5?'#B07A1E':'#B23A2E'),
           borderRadius: 4, barThickness: 28 }]
       }
     });
@@ -868,13 +1037,13 @@ async function renderRun(filename) {
       data: {
         labels: summaries.map(m => m.name),
         datasets: [{ data: summaries.map(m => m.std),
-          backgroundColor: summaries.map(m => m.std<0.5?'#22c55e':m.std<1?'#f59e0b':'#ef4444'),
+          backgroundColor: summaries.map(m => m.std<0.5?'#2F7D4F':m.std<1?'#B07A1E':'#B23A2E'),
           borderRadius: 4, barThickness: 28 }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
         scales: {
-          y: { min: 0, grid: { color: '#f1f5f9' } },
+          y: { min: 0, grid: { color: '#EAE0CE' } },
           x: { grid: { display: false } }
         },
         plugins: {
@@ -899,7 +1068,7 @@ async function renderRun(filename) {
           if (!meta) return;
           ctx.save();
           ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#1e293b';
+          ctx.fillStyle = '#1A1712';
           ctx.textBaseline = 'middle';
           meta.data.forEach((pt, i) => {
             const d = chart.data.datasets[0].data[i];
@@ -917,8 +1086,8 @@ async function renderRun(filename) {
           datasets: [{
             label: 'Models',
             data: summaries.map(m => ({ x: m.cost, y: m.avg, model: m.name })),
-            backgroundColor: summaries.map(m => m.avg>=7?'#22c55e':m.avg>=5?'#f59e0b':'#ef4444'),
-            borderColor: '#ffffff', pointRadius: 8, pointHoverRadius: 11, pointBorderWidth: 2,
+            backgroundColor: summaries.map(m => m.avg>=7?'#2F7D4F':m.avg>=5?'#B07A1E':'#B23A2E'),
+            borderColor: '#FBF8F1', pointRadius: 8, pointHoverRadius: 11, pointBorderWidth: 2,
           }]
         },
         options: {
@@ -926,11 +1095,11 @@ async function renderRun(filename) {
           layout: { padding: { right: 24, top: 8 } },
           scales: {
             x: { type: 'linear', min: 0, max: rcxMax,
-              title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#64748b' },
-              grid: { color: '#f1f5f9' }, ticks: { callback: v => '$' + v.toFixed(3) } },
+              title: { display: true, text: 'Cost ($) \u2192 cheaper is better', font: { size: 12, weight: '600' }, color: '#5C5446' },
+              grid: { color: '#EAE0CE' }, ticks: { callback: v => '$' + v.toFixed(3) } },
             y: { min: rcyMin, max: rcyMax,
-              title: { display: true, text: 'Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#64748b' },
-              grid: { color: '#f1f5f9' }, ticks: { stepSize: 0.5 } }
+              title: { display: true, text: 'Score (1\u201310) \u2191 better', font: { size: 12, weight: '600' }, color: '#5C5446' },
+              grid: { color: '#EAE0CE' }, ticks: { stepSize: 0.5 } }
           },
           plugins: {
             legend: { display: false },
@@ -1000,9 +1169,9 @@ async function renderCompare() {
     const first = info.scores[0]??0, last = info.scores[info.scores.length-1]??0;
     const delta = +(last - first).toFixed(1);
     const cls   = delta > 0.1 ? 'delta-up' : delta < -0.1 ? 'delta-down' : 'delta-flat';
-    const arrow = delta > 0.1 ? '&#9650;' : delta < -0.1 ? '&#9660;' : '&#9644;';
+    const arrow = delta > 0.1 ? '&uarr;' : delta < -0.1 ? '&darr;' : '';
     const isWinner = modelId === winnerId && bestDelta > 0.1;
-    html += `<tr><td style="font-weight:500">${info.name}${isWinner ? '<span class="winner-badge">&#9650; Best</span>' : ''}</td>`;
+    html += `<tr><td style="font-weight:500">${info.name}${isWinner ? '<span class="winner-badge">Best</span>' : ''}</td>`;
     info.scores.forEach(s => { html += `<td class="score ${scoreClass(s||0)}">${s ?? '\u2014'}</td>`; });
     html += `<td class="${cls}">${arrow} ${delta > 0 ? '+' : ''}${delta}</td></tr>`;
   });
@@ -1023,7 +1192,7 @@ async function renderCompare() {
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       scales: {
-        x: { min: 0, max: 10, grid: { color: '#f1f5f9' }, ticks: { stepSize: 2 } },
+        x: { min: 0, max: 10, grid: { color: '#EAE0CE' }, ticks: { stepSize: 2 } },
         y: { grid: { display: false } }
       },
       plugins: {
