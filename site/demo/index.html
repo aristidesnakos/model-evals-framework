@@ -79,6 +79,21 @@ tr:hover td { background: var(--accent-light); }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
 .badge-suite { background: #ede9fe; color: #7c3aed; }
 .badge-cat { background: #e0f2fe; color: #0284c7; }
+.badge-mod { background: #f1f5f9; color: #475569; }
+.badge-mod-vision { background: #fce7f3; color: #be185d; }
+.badge-mod-text { background: #ecfdf5; color: #047857; }
+
+/* Category tabs (lmarena-style leaderboard selector) */
+.cat-tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.cat-tab { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 16px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; transition: all 0.15s; min-width: 150px; }
+.cat-tab:hover { border-color: var(--accent); }
+.cat-tab.active { border-color: var(--accent); background: var(--accent-light); box-shadow: var(--shadow); }
+.cat-tab-mod { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 1px 6px; border-radius: 4px; }
+.cat-mod-vision { background: #fce7f3; color: #be185d; }
+.cat-mod-text { background: #ecfdf5; color: #047857; }
+.cat-tab-label { font-size: 14px; font-weight: 700; color: var(--text); }
+.cat-tab-count { font-size: 11px; color: var(--muted); }
+.cat-tab.active .cat-tab-label { color: #2563eb; }
 
 /* Meta */
 .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
@@ -149,7 +164,7 @@ input[type=checkbox] { accent-color: var(--accent); }
 </head>
 <body>
 <div class="demo-banner">
-  This is a live demo with real evaluation data. &nbsp;<a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">Install EvalPulse</a> to run evaluations against your own prompts and models.
+  This is a demo with illustrative, seeded data across text and vision eval categories. &nbsp;<a href="https://github.com/aristidesnakos/model-evals-framework" target="_blank">Install EvalPulse</a> to run evaluations against your own prompts and models.
 </div>
 <header>
   <h1>EvalPulse</h1>
@@ -271,13 +286,57 @@ async function fetchLeaderboard() {
 
 // --- RENDERERS ---
 
+// Category tab state for the lmarena-style leaderboard selector.
+let selectedCat = null;
+function selectCat(k) { selectedCat = k; renderLeaderboard(); }
+
 async function renderLeaderboard() {
   updateNav('leaderboard');
   const app = document.getElementById('app');
+  const data = await fetchLeaderboard();
+  let cats = data.categories || [];
 
-  const { aggregated = [], calibration = [], reportCount = 0, testCaseCount = 0 } = await fetchLeaderboard();
-  if (!aggregated.length) {
+  // Back-compat: a leaderboard.json without `categories` (older build) still
+  // renders as a single quality category from the legacy aggregated fields.
+  if (!cats.length && (data.aggregated || []).length) {
+    cats = [{
+      key: 'all', label: 'All Runs', modality: 'text', task_type: 'generation',
+      metric_kind: 'quality', suites: [], reportCount: data.reportCount || 0,
+      leaderboard: data.aggregated, calibration: data.calibration || [],
+      testCaseCount: data.testCaseCount || 0,
+    }];
+  }
+  if (!cats.length) {
     app.innerHTML = '<div class="empty-state"><h2>No reports yet</h2><p>Run an evaluation first:<br><code>python evalpulse.py --run-eval</code></p></div>';
+    return;
+  }
+  if (!selectedCat || !cats.find(c => c.key === selectedCat)) selectedCat = cats[0].key;
+  const cat = cats.find(c => c.key === selectedCat);
+
+  // Category tab bar (modality · task) — pick the leaderboard for your task.
+  const tabs = cats.map(c => `
+    <button class="cat-tab ${c.key === selectedCat ? 'active' : ''}" onclick="selectCat('${c.key}')">
+      <span class="cat-tab-mod cat-mod-${c.modality}">${c.modality === 'vision' ? '◉ Vision' : '▤ Text'}</span>
+      <span class="cat-tab-label">${c.label.split(' · ')[1] || c.label}</span>
+      <span class="cat-tab-count">${c.reportCount} run${c.reportCount > 1 ? 's' : ''}</span>
+    </button>`).join('');
+  app.innerHTML = `<div class="cat-tabs">${tabs}</div><div id="cat-body"></div>`;
+  const body = document.getElementById('cat-body');
+
+  if (cat.metric_kind === 'classification_gate') {
+    renderGateCategory(body, cat);
+  } else {
+    renderQualityCategory(body, cat);
+  }
+}
+
+function renderQualityCategory(app, cat) {
+  const aggregated = cat.leaderboard || [];
+  const calibration = cat.calibration || [];
+  const reportCount = cat.reportCount || 0;
+  const testCaseCount = cat.testCaseCount || 0;
+  if (!aggregated.length) {
+    app.innerHTML = '<div class="empty-state"><h2>No data in this category</h2></div>';
     return;
   }
 
@@ -287,7 +346,7 @@ async function renderLeaderboard() {
   // Hero
   let html = `<div class="card">
     <div class="meta">
-      <span><strong>Suite</strong> <span class="badge badge-suite">swms_safety_generator</span></span>
+      <span><strong>Suite${cat.suites.length > 1 ? 's' : ''}</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
       <span><strong>Runs aggregated</strong> ${reportCount}</span>
       <span><strong>Test cases</strong> ${testCaseCount}</span>
       <span><strong>Production cutoff</strong> &le;${PRODUCTION_LATENCY_CUTOFF}s latency</span>
@@ -569,6 +628,99 @@ async function renderLeaderboard() {
   }
 }
 
+// --- Classification-gate category (vision safety) ---
+function fmtRate(v) {
+  return v == null ? '<span style="color:var(--muted)">&mdash;</span>' : (v * 100).toFixed(0) + '%';
+}
+// goodLow=true: lower value is better (error rates); false: higher is better (accuracy/precision).
+function rateColor(v, goodLow) {
+  if (v == null) return 'var(--muted)';
+  const bad = goodLow ? v : 1 - v;
+  return bad <= 0.05 ? 'var(--green)' : bad <= 0.2 ? 'var(--amber)' : 'var(--red)';
+}
+
+function renderGateCategory(app, cat) {
+  const rows = cat.gate || [];
+  if (!rows.length) { app.innerHTML = '<div class="empty-state"><h2>No gate data in this category</h2></div>'; return; }
+  const n = rows.length;
+  const avgAcc = rows.reduce((a, r) => a + (r.accuracy || 0), 0) / n;
+  const bestRej = Math.min(...rows.map(r => r.good_reject_rate == null ? 1 : r.good_reject_rate));
+  const unsafeMeasurable = rows.some(r => r.unsafe_total > 0);
+
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
+      <span><strong>Task</strong> binary safety gate (pass / block)</span>
+      <span><strong>Cases</strong> ${rows[0].n}/model</span>
+      <span><strong>Positive class</strong> should_pass</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num">${n}</span><span class="hero-label">Vision Models</span></div>
+      <div class="hero-stat"><span class="hero-num">${(avgAcc * 100).toFixed(0)}%</span><span class="hero-label">Avg Accuracy</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--green)">${(bestRej * 100).toFixed(0)}%</span><span class="hero-label">Best Good-Reject</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--muted)">${unsafeMeasurable ? 'Yes' : '—'}</span><span class="hero-label">Unsafe-Pass Measurable</span></div>
+    </div>
+    <div class="calibration-note"><strong>SAFE-only set.</strong> ${cat.gateNote || ''}</div>
+  </div>`;
+
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Over-Rejection (Good-Reject Rate)</h2>
+      <div class="inline-legend">Lower is better &middot; fraction of legitimate photos wrongly blocked</div>
+    </div>
+    <div class="chart-container" style="height:${Math.max(180, n * 52)}px"><canvas id="gate-bar"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="section-header">
+      <h2>Classification Leaderboard</h2>
+      <div class="inline-legend">Positive = should_pass &middot; refusals/malformed count as BLOCK</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Accuracy</th>
+      <th>Good-Reject <span class="scale-note">(FN/good)</span></th>
+      <th>Unsafe-Pass <span class="scale-note">(FP/unsafe)</span></th>
+      <th>Precision</th><th>Recall</th>
+      <th>TP/TN/FP/FN</th><th>Latency</th><th>Cost</th>
+    </tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i + 1}</td>
+      <td style="font-weight:500">${r.name}</td>
+      <td style="color:${rateColor(r.accuracy, false)};font-weight:600">${fmtRate(r.accuracy)}</td>
+      <td style="color:${rateColor(r.good_reject_rate, true)};font-weight:600">${fmtRate(r.good_reject_rate)}</td>
+      <td style="color:${r.unsafe_pass_rate == null ? 'var(--muted)' : rateColor(r.unsafe_pass_rate, true)};font-weight:600">${fmtRate(r.unsafe_pass_rate)}</td>
+      <td>${fmtRate(r.precision)}</td>
+      <td>${fmtRate(r.recall)}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--muted)">${r.tp}/${r.tn}/${r.fp}/${r.fn}</td>
+      <td style="font-variant-numeric:tabular-nums">${r.lat}s</td>
+      <td style="font-variant-numeric:tabular-nums">${fmtCost(r.cost || 0)}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  app.innerHTML = html;
+
+  new Chart(document.getElementById('gate-bar'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.name),
+      datasets: [{
+        data: rows.map(r => +(((r.good_reject_rate == null ? 0 : r.good_reject_rate)) * 100).toFixed(1)),
+        backgroundColor: rows.map(r => { const v = r.good_reject_rate || 0; return v <= 0.05 ? '#22c55e' : v <= 0.2 ? '#f59e0b' : '#ef4444'; }),
+        borderRadius: 4, barThickness: 28,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: 0, suggestedMax: 50, grid: { color: '#f1f5f9' }, ticks: { callback: v => v + '%' } },
+        y: { grid: { display: false } }
+      },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'Good-Reject: ' + ctx.raw + '%' } } }
+    }
+  });
+}
+
 async function renderRunsList() {
   updateNav('runs');
   const app = document.getElementById('app');
@@ -590,7 +742,11 @@ async function renderRunsList() {
     return `<tr>
       <td><input type="checkbox" data-file="${r.filename}" onchange="toggleSelect(this)" ${selected.has(r.filename)?'checked':''}></td>
       <td><a href="#/run/${r.filename}" style="color:var(--accent);text-decoration:none;font-weight:500">${fmtDate(r.run_id)}</a></td>
-      <td><span class="badge badge-suite">${r.suite_name}</span></td>
+      <td>
+        <span class="badge badge-suite">${r.suite_name}</span>
+        ${r.modality ? `<span class="badge badge-mod badge-mod-${r.modality}">${r.modality === 'vision' ? '◉ vision' : '▤ text'}</span>` : ''}
+        ${r.task_type ? `<span class="badge badge-cat">${r.task_type}</span>` : ''}
+      </td>
       <td style="text-align:center">${r.model_count}</td>
       <td>${r.top_model ? `<span class="score ${scoreClass(r.top_model.avg)}">${r.top_model.avg}</span> <span style="color:var(--muted);font-size:12px">${r.top_model.name}</span>` : '\u2014'}</td>
       <td>

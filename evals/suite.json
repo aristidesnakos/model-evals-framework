@@ -1,5 +1,7 @@
 {
   "suite_name": "regulatory_compliance",
+  "modality": "text",
+  "task_type": "generation",
   "description": "Evaluates models on regulatory compliance document generation for construction safety",
   "runs_per_test": 3,
   "scoring_weights": {
