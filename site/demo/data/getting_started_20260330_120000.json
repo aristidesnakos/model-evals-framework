@@ -1,0 +1,707 @@
+{
+  "run_id": "20260330_120000",
+  "suite_name": "getting_started",
+  "runs_per_test": 1,
+  "judge_models": [
+    "anthropic/claude-sonnet-4.6",
+    "openai/gpt-5.4"
+  ],
+  "results": [
+    {
+      "model_id": "google/gemini-3.1-flash-lite",
+      "model_name": "Gemini 3.1 Flash Lite",
+      "pricing": {
+        "input_per_million": 0.25,
+        "output_per_million": 1.5
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.3,
+              "tokens": {
+                "input": 608,
+                "output": 488
+              },
+              "cost": 0.000884,
+              "scores": {
+                "completeness": 7.1,
+                "accuracy": 6.2,
+                "format": 8.1,
+                "domain_relevance": 8.0,
+                "clarity": 6.5
+              },
+              "weighted_score": 7.05,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.05,
+          "std_dev": 0.0,
+          "min_score": 7.05,
+          "max_score": 7.05
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.69,
+              "tokens": {
+                "input": 429,
+                "output": 290
+              },
+              "cost": 0.000542,
+              "scores": {
+                "completeness": 5.5,
+                "accuracy": 7.7,
+                "format": 6.5,
+                "domain_relevance": 7.6,
+                "clarity": 8.3
+              },
+              "weighted_score": 6.91,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.91,
+          "std_dev": 0.0,
+          "min_score": 6.91,
+          "max_score": 6.91
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.81,
+              "tokens": {
+                "input": 632,
+                "output": 330
+              },
+              "cost": 0.000653,
+              "scores": {
+                "completeness": 8.4,
+                "accuracy": 5.6,
+                "format": 8.3,
+                "domain_relevance": 8.4,
+                "clarity": 7.8
+              },
+              "weighted_score": 7.49,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.49,
+          "std_dev": 0.0,
+          "min_score": 7.49,
+          "max_score": 7.49
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "google/gemini-3.5-flash",
+      "model_name": "Gemini 3.5 Flash",
+      "pricing": {
+        "input_per_million": 0.075,
+        "output_per_million": 0.3
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 0.92,
+              "tokens": {
+                "input": 492,
+                "output": 412
+              },
+              "cost": 0.00016,
+              "scores": {
+                "completeness": 8.7,
+                "accuracy": 8.8,
+                "format": 7.8,
+                "domain_relevance": 6.6,
+                "clarity": 6.1
+              },
+              "weighted_score": 8.02,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 8.02,
+          "std_dev": 0.0,
+          "min_score": 8.02,
+          "max_score": 8.02
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.12,
+              "tokens": {
+                "input": 544,
+                "output": 318
+              },
+              "cost": 0.000136,
+              "scores": {
+                "completeness": 7.9,
+                "accuracy": 6.9,
+                "format": 7.3,
+                "domain_relevance": 8.2,
+                "clarity": 6.8
+              },
+              "weighted_score": 7.44,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.44,
+          "std_dev": 0.0,
+          "min_score": 7.44,
+          "max_score": 7.44
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.28,
+              "tokens": {
+                "input": 640,
+                "output": 547
+              },
+              "cost": 0.000212,
+              "scores": {
+                "completeness": 9.2,
+                "accuracy": 8.0,
+                "format": 8.9,
+                "domain_relevance": 6.3,
+                "clarity": 6.8
+              },
+              "weighted_score": 8.12,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 8.12,
+          "std_dev": 0.0,
+          "min_score": 8.12,
+          "max_score": 8.12
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "perceptron/perceptron-mk1",
+      "model_name": "Perceptron MK1",
+      "pricing": {
+        "input_per_million": 0.5,
+        "output_per_million": 2.0
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.47,
+              "tokens": {
+                "input": 554,
+                "output": 365
+              },
+              "cost": 0.001007,
+              "scores": {
+                "completeness": 6.9,
+                "accuracy": 7.4,
+                "format": 6.9,
+                "domain_relevance": 6.6,
+                "clarity": 6.7
+              },
+              "weighted_score": 6.98,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.98,
+          "std_dev": 0.0,
+          "min_score": 6.98,
+          "max_score": 6.98
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.82,
+              "tokens": {
+                "input": 589,
+                "output": 450
+              },
+              "cost": 0.001195,
+              "scores": {
+                "completeness": 7.0,
+                "accuracy": 6.9,
+                "format": 5.6,
+                "domain_relevance": 8.0,
+                "clarity": 6.6
+              },
+              "weighted_score": 6.87,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.87,
+          "std_dev": 0.0,
+          "min_score": 6.87,
+          "max_score": 6.87
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.11,
+              "tokens": {
+                "input": 351,
+                "output": 549
+              },
+              "cost": 0.001273,
+              "scores": {
+                "completeness": 6.6,
+                "accuracy": 8.8,
+                "format": 6.5,
+                "domain_relevance": 8.3,
+                "clarity": 6.6
+              },
+              "weighted_score": 7.5,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.5,
+          "std_dev": 0.0,
+          "min_score": 7.5,
+          "max_score": 7.5
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "x-ai/grok-4.3",
+      "model_name": "Grok 4.3",
+      "pricing": {
+        "input_per_million": 0.8,
+        "output_per_million": 3.2
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.04,
+              "tokens": {
+                "input": 626,
+                "output": 578
+              },
+              "cost": 0.00235,
+              "scores": {
+                "completeness": 8.4,
+                "accuracy": 7.2,
+                "format": 9.1,
+                "domain_relevance": 7.0,
+                "clarity": 7.5
+              },
+              "weighted_score": 7.85,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.85,
+          "std_dev": 0.0,
+          "min_score": 7.85,
+          "max_score": 7.85
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.42,
+              "tokens": {
+                "input": 390,
+                "output": 223
+              },
+              "cost": 0.001026,
+              "scores": {
+                "completeness": 9.2,
+                "accuracy": 7.8,
+                "format": 6.2,
+                "domain_relevance": 9.3,
+                "clarity": 6.5
+              },
+              "weighted_score": 8.07,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 8.07,
+          "std_dev": 0.0,
+          "min_score": 8.07,
+          "max_score": 8.07
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.69,
+              "tokens": {
+                "input": 626,
+                "output": 566
+              },
+              "cost": 0.002312,
+              "scores": {
+                "completeness": 8.5,
+                "accuracy": 9.0,
+                "format": 6.5,
+                "domain_relevance": 8.5,
+                "clarity": 7.7
+              },
+              "weighted_score": 8.27,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 8.27,
+          "std_dev": 0.0,
+          "min_score": 8.27,
+          "max_score": 8.27
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "stepfun/step-3.7-flash",
+      "model_name": "Step 3.7 Flash",
+      "pricing": {
+        "input_per_million": 0.4,
+        "output_per_million": 1.6
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.48,
+              "tokens": {
+                "input": 467,
+                "output": 481
+              },
+              "cost": 0.000956,
+              "scores": {
+                "completeness": 7.5,
+                "accuracy": 7.0,
+                "format": 7.5,
+                "domain_relevance": 6.8,
+                "clarity": 6.1
+              },
+              "weighted_score": 7.11,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.11,
+          "std_dev": 0.0,
+          "min_score": 7.11,
+          "max_score": 7.11
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.02,
+              "tokens": {
+                "input": 642,
+                "output": 475
+              },
+              "cost": 0.001017,
+              "scores": {
+                "completeness": 5.8,
+                "accuracy": 7.2,
+                "format": 8.7,
+                "domain_relevance": 5.6,
+                "clarity": 7.3
+              },
+              "weighted_score": 6.78,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.78,
+          "std_dev": 0.0,
+          "min_score": 6.78,
+          "max_score": 6.78
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 3.75,
+              "tokens": {
+                "input": 400,
+                "output": 211
+              },
+              "cost": 0.000498,
+              "scores": {
+                "completeness": 7.3,
+                "accuracy": 7.7,
+                "format": 5.8,
+                "domain_relevance": 6.8,
+                "clarity": 8.0
+              },
+              "weighted_score": 7.19,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.19,
+          "std_dev": 0.0,
+          "min_score": 7.19,
+          "max_score": 7.19
+        }
+      ],
+      "errors": 0
+    },
+    {
+      "model_id": "minimax/minimax-m3",
+      "model_name": "MiniMax M3",
+      "pricing": {
+        "input_per_million": 0.35,
+        "output_per_million": 1.4
+      },
+      "test_results": [
+        {
+          "test_case_id": "tc_001",
+          "test_case_name": "Text summarization",
+          "category": "summarization",
+          "prompt": "Summarize the following passage into exactly 3 bullet points. Each bullet should capture a distinct key idea.\n\nPassage: Evaluating large language models is a complex process that goes beyond simple accuracy metrics. Production deployments require understanding how models perform across multiple dimensions including response quality, consistency across repeated runs, latency under load, and cost per query. A robust evaluation framework should test models with real production prompts rather than academic benchmarks, use multiple judge models to reduce scoring bias, and track results over time to detect regressions. The choice of evaluation dimensions and their relative weights should reflect the actual priorities of the deployment \u2014 a customer-facing chatbot values clarity and safety differently than a code generation tool values correctness and completeness.",
+          "reference_answer": "Should produce exactly 3 bullet points covering: (1) evaluation complexity beyond accuracy, (2) what a robust framework needs, (3) dimension weights should match deployment priorities.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 2.02,
+              "tokens": {
+                "input": 631,
+                "output": 230
+              },
+              "cost": 0.000543,
+              "scores": {
+                "completeness": 6.5,
+                "accuracy": 7.8,
+                "format": 6.0,
+                "domain_relevance": 6.5,
+                "clarity": 6.7
+              },
+              "weighted_score": 6.83,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 6.83,
+          "std_dev": 0.0,
+          "min_score": 6.83,
+          "max_score": 6.83
+        },
+        {
+          "test_case_id": "tc_002",
+          "test_case_name": "Structured list generation",
+          "category": "structured_output",
+          "prompt": "List exactly 5 key considerations when choosing a large language model for a production application. For each consideration, provide a one-sentence explanation of why it matters. Format as a numbered list.",
+          "reference_answer": "Should include considerations such as: cost per token, response latency, output quality/accuracy, context window size, rate limits/availability, safety/content filtering, and consistency across runs. Each with a brief explanation.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 0.79,
+              "tokens": {
+                "input": 544,
+                "output": 181
+              },
+              "cost": 0.000444,
+              "scores": {
+                "completeness": 6.2,
+                "accuracy": 8.5,
+                "format": 8.6,
+                "domain_relevance": 6.0,
+                "clarity": 6.0
+              },
+              "weighted_score": 7.2,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.2,
+          "std_dev": 0.0,
+          "min_score": 7.2,
+          "max_score": 7.2
+        },
+        {
+          "test_case_id": "tc_003",
+          "test_case_name": "Compare and contrast reasoning",
+          "category": "reasoning",
+          "prompt": "Compare rule-based systems and machine learning approaches for content moderation. Structure your response with these 5 sections: (1) How each approach works, (2) Strengths of rule-based, (3) Strengths of ML-based, (4) Weaknesses of each, (5) When to use which approach. Keep each section to 2-3 sentences.",
+          "reference_answer": "Should cover: rule-based uses explicit patterns/keywords while ML uses trained models; rules are transparent and predictable but brittle; ML handles nuance and new patterns but is opaque; rules fail on novel content, ML needs training data and can have bias; use rules for clear-cut violations, ML for nuanced content, often best combined.",
+          "runs": [
+            {
+              "run": 0,
+              "error": null,
+              "latency": 1.55,
+              "tokens": {
+                "input": 379,
+                "output": 476
+              },
+              "cost": 0.000799,
+              "scores": {
+                "completeness": 8.2,
+                "accuracy": 7.8,
+                "format": 7.2,
+                "domain_relevance": 8.5,
+                "clarity": 7.3
+              },
+              "weighted_score": 7.88,
+              "validation": {
+                "passed": true,
+                "failures": []
+              }
+            }
+          ],
+          "avg_score": 7.88,
+          "std_dev": 0.0,
+          "min_score": 7.88,
+          "max_score": 7.88
+        }
+      ],
+      "errors": 0
+    }
+  ]
+}

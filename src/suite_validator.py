@@ -123,6 +123,37 @@ def validate_suite(suite_name: str) -> ValidationResult:
             f"eval_type must be 'quality' or 'safety', got {eval_type!r}"
         )
 
+    # Presentation/metric facets (orthogonal to eval_type, which selects the
+    # scoring pipeline). 'modality' and 'task_type' drive how a suite is listed
+    # on the dashboard (lmarena-style category tabs) and which headline metric is
+    # shown. Both are optional; modality defaults to 'vision' when any test case
+    # carries an image_path, else 'text'.
+    modality = suite.get("modality")
+    if modality is not None and modality not in ("text", "vision"):
+        result.errors.append(
+            f"modality must be 'text' or 'vision', got {modality!r}"
+        )
+    task_type = suite.get("task_type")
+    if task_type is not None and task_type not in ("generation", "classification"):
+        result.errors.append(
+            f"task_type must be 'generation' or 'classification', got {task_type!r}"
+        )
+    has_image = any(
+        isinstance(tc, dict) and tc.get("image_path")
+        for tc in (suite.get("test_cases") or [])
+    )
+    if modality == "text" and has_image:
+        result.warnings.append(
+            "modality='text' but a test case declares image_path — did you mean "
+            "modality='vision'?"
+        )
+    if modality is None and has_image:
+        result.warnings.append(
+            "test cases use image_path but 'modality' is unset; it will be "
+            "inferred as 'vision'. Set \"modality\": \"vision\" explicitly so the "
+            "dashboard lists this suite under the Vision category."
+        )
+
     # scoring_weights validation
     weights = suite["scoring_weights"]
     if not isinstance(weights, dict) or not weights:
