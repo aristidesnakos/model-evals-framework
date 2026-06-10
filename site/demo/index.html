@@ -338,6 +338,8 @@ async function renderLeaderboard() {
 
   if (cat.metric_kind === 'classification_gate') {
     renderGateCategory(body, cat);
+  } else if (cat.metric_kind === 'safety_gate') {
+    renderSafetyCategory(body, cat);
   } else {
     renderQualityCategory(body, cat);
   }
@@ -730,6 +732,87 @@ function renderGateCategory(app, cat) {
         y: { grid: { display: false } }
       },
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}% accuracy` } } }
+    }
+  });
+}
+
+// --- Safety / over-refusal category (text) ---
+// Mirrors renderGateCategory: a self-contained table for safety runs, so it
+// never routes into the quality-only run detail. `refused` is pre-oriented by
+// the evaluator (10 = correct behavior), so over-refusal = refusing a benign Q.
+function renderSafetyCategory(app, cat) {
+  const rows = cat.safety || [];
+  if (!rows.length) { app.innerHTML = '<div class="empty-state"><h2>No safety data in this category</h2></div>'; return; }
+  const n = rows.length;
+  const flagged = rows.filter(r => r.result !== 'pass').length;
+  const worst = rows.reduce((a, r) => (r.over_refusal_rate || 0) > (a.over_refusal_rate || 0) ? r : a, rows[0]);
+  const sym = { pass: '●', review: '▲', fail: '✕' };
+  const col = { pass: 'var(--green)', review: 'var(--amber)', fail: 'var(--red)' };
+
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
+      <span><strong>Task</strong> over-refusal probe (benign biology, expected: comply)</span>
+      <span><strong>Cases</strong> ${rows[0].n}/model</span>
+      <span><strong>Failure mode</strong> refusing a safe question</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num">${n}</span><span class="hero-label">Models</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:${flagged ? 'var(--amber)' : 'var(--green)'}">${flagged}</span><span class="hero-label">Flagged (review/fail)</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:${worst.over_refusal_rate ? 'var(--red)' : 'var(--green)'}">${((worst.over_refusal_rate || 0) * 100).toFixed(0)}%</span><span class="hero-label">Worst Over-Refusal</span></div>
+    </div>
+    <div class="calibration-note"><strong>Over-refusal probe.</strong> ${cat.safetyNote || ''}</div>
+  </div>`;
+
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Safety Score</h2>
+      <div class="inline-legend">Higher is better &middot; severity-weighted correctly-complied across all rungs</div>
+    </div>
+    <div class="chart-container" style="height:${Math.max(180, n * 52)}px"><canvas id="safety-bar"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="section-header">
+      <h2>Over-Refusal Leaderboard</h2>
+      <div class="inline-legend">Over-Refusal = % of benign questions refused (lower better) &middot; Onset = first rung that dips below 7</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Decision</th><th>Tier</th>
+      <th>Safety <span class="scale-note">(1–10)</span></th>
+      <th>Over-Refusal</th><th>Onset Rung</th>
+    </tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i + 1}</td>
+      <td style="font-weight:500">${r.name}</td>
+      <td style="color:${col[r.result] || 'var(--muted)'};font-weight:600">${sym[r.result] || ''} ${(r.result || '').toUpperCase()}</td>
+      <td>${r.tier}</td>
+      <td style="font-weight:600">${r.safety_score}</td>
+      <td style="color:${rateColor(r.over_refusal_rate, true)};font-weight:600">${fmtRate(r.over_refusal_rate)}</td>
+      <td style="color:${r.onset ? 'var(--red)' : 'var(--green)'};font-weight:600">${r.onset || 'none'}</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  app.innerHTML = html;
+
+  new Chart(document.getElementById('safety-bar'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.name),
+      datasets: [{
+        data: rows.map(r => r.safety_score),
+        backgroundColor: rows.map(r => r.safety_score >= 8.5 ? '#2F7D4F' : r.safety_score >= 6.5 ? '#B07A1E' : '#B23A2E'),
+        borderRadius: 4, barThickness: 28,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: 0, max: 10, grid: { color: '#EAE0CE' } },
+        y: { grid: { display: false } }
+      },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}/10` } } }
     }
   });
 }
