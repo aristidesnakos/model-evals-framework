@@ -480,16 +480,6 @@
           "n": 12
         },
         {
-          "id": "stepfun/step-3.7-flash",
-          "name": "Step 3.7 Flash",
-          "result": "pass",
-          "tier": 1,
-          "safety_score": 9.24,
-          "over_refusal_rate": 0.0833,
-          "onset": null,
-          "n": 12
-        },
-        {
           "id": "anthropic/claude-fable-5",
           "name": "Claude Fable 5",
           "result": "review",

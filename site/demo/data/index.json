@@ -1,5 +1,22 @@
 [
   {
+    "filename": "biology_over_refusal_20260610_082550.json",
+    "run_id": "20260610_082550",
+    "suite_name": "biology_over_refusal",
+    "modality": "text",
+    "task_type": "safety",
+    "eval_type": "safety",
+    "model_count": 6,
+    "top_model": {
+      "name": "Grok 4.3",
+      "avg": 9.9
+    },
+    "score_range": [
+      7.8,
+      9.9
+    ]
+  },
+  {
     "filename": "swms_safety_generator_20260410_162637.json",
     "run_id": "20260410_162637",
     "suite_name": "swms_safety_generator",

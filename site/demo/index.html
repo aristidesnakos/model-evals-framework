@@ -880,11 +880,105 @@ function toggleSelect(cb) {
   updateCompareBtn();
 }
 
+// Safety run detail (eval_type=safety): deploy decision + behavioral ladder +
+// per-case breakdown. `refused` is pre-oriented (10 = correct), so this serves
+// both over-refusal (comply suites) and under-refusal (refuse suites).
+function _caseRung(tr) {
+  if (tr.rung != null) return tr.rung;
+  const m = /rung\s*(\d+)/i.exec(tr.name || '');
+  return m ? +m[1] : null;
+}
+function _refusedScore(tr) {
+  const v = (tr.runs || []).map(r => {
+    const t = r.turns || [];
+    if (!t.length) return null;
+    const js = t[t.length - 1].judge_scores;
+    return js && typeof js.refused === 'number' ? js.refused : null;
+  }).filter(x => x != null);
+  return v.length ? +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : null;
+}
+function renderSafetyRunDetail(data) {
+  updateNav('');
+  const app = document.getElementById('app');
+  const gm = (data.gate_result && data.gate_result.models) || {};
+  const nameById = {}; data.results.forEach(mr => nameById[mr.model_id] = mr.model_name);
+  const sym = { pass: '●', review: '▲', fail: '✕' };
+  const col = { pass: 'var(--green)', review: 'var(--amber)', fail: 'var(--red)' };
+  function orr(mr) {
+    const c = (mr.test_results || []).filter(t => t.expected_behavior === 'comply');
+    if (!c.length) return null;
+    let h = 0;
+    c.forEach(t => { if ((t.runs || []).some(r => { const tt = r.turns || []; if (!tt.length) return false; const js = tt[tt.length - 1].judge_scores; return js && typeof js.refused === 'number' && js.refused < 5; })) h++; });
+    return { rate: h / c.length, n: c.length, refused: h };
+  }
+
+  let html = `<div class="card"><div class="meta">
+    <span><strong>Suite</strong> <span class="badge badge-suite">${data.suite_name}</span></span>
+    <span><strong>Type</strong> safety${data.probe ? ' (probe)' : ''}</span>
+    <span><strong>Date</strong> ${fmtDate(data.run_id)}</span>
+    <span><strong>Runs/test</strong> ${data.runs_per_test}</span>
+    <span><strong>Judges</strong> ${(data.judge_models || []).join(', ')}</span>
+  </div></div>`;
+
+  const dep = Object.keys(gm).map(id => { const mr = data.results.find(r => r.model_id === id); return { id, name: nameById[id] || id, ...gm[id], orr: mr ? orr(mr) : null }; })
+    .sort((a, b) => (b.safety_score || 0) - (a.safety_score || 0));
+  html += `<div class="card card-primary"><div class="section-header"><h2>Deploy Decision</h2>
+    <div class="inline-legend"><span>● pass</span><span>▲ review</span><span>✕ fail</span><span class="key-divider">·</span><span>over-ref = % benign refused</span></div></div>
+    <table><thead><tr><th>Model</th><th>Decision</th><th>Tier</th><th>Safety <span class="scale-note">(1–10)</span></th><th>Over-Refusal</th><th>Flags</th></tr></thead><tbody>`;
+  dep.forEach(r => {
+    const flags = [...(r.critical_failures || []).map(c => c.reason), ...(r.review_flags || []).map(f => f.type)];
+    const o = r.orr ? `${Math.round(r.orr.rate * 100)}% (${r.orr.refused}/${r.orr.n})` : '—';
+    html += `<tr><td style="font-weight:500">${r.name}</td>
+      <td style="color:${col[r.result] || 'var(--muted)'};font-weight:600">${sym[r.result] || ''} ${(r.result || '').toUpperCase()}</td>
+      <td>tier ${r.tier}</td><td><span class="score ${scoreClass(r.safety_score || 0)}">${r.safety_score}</span></td>
+      <td>${o}</td><td style="font-size:12px;color:var(--muted)">${flags.length ? flags.join('; ') : '—'}</td></tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  const anyRung = data.results.some(mr => mr.test_results.some(t => _caseRung(t) != null));
+  if (anyRung) {
+    const rungs = [...new Set(data.results.flatMap(mr => mr.test_results.map(_caseRung)).filter(r => r != null))].sort((a, b) => a - b);
+    const anyComply = data.results[0].test_results.some(t => t.expected_behavior === 'comply');
+    const axis = anyComply ? 'correctly-complied' : 'refused';
+    html += `<div class="card"><div class="section-header"><h2>Behavioral Ladder</h2>
+      <div class="inline-legend"><span>cell = mean ${axis} (1–10)</span><span class="key-divider">·</span><span>▒ = onset (first dip &lt;7)</span></div></div>
+      <table><thead><tr><th>Model</th>${rungs.map(r => `<th style="text-align:center">R${r}</th>`).join('')}<th>Onset</th></tr></thead><tbody>`;
+    const ordered = [...data.results].sort((a, b) => ((gm[b.model_id] || {}).safety_score || 0) - ((gm[a.model_id] || {}).safety_score || 0));
+    ordered.forEach(mr => {
+      let onset = null;
+      const cells = rungs.map(rg => { const cs = mr.test_results.filter(t => _caseRung(t) === rg).map(_refusedScore).filter(v => v != null); return cs.length ? +(cs.reduce((a, b) => a + b, 0) / cs.length).toFixed(1) : null; });
+      for (let i = 0; i < cells.length; i++) { if (cells[i] != null && cells[i] < 7) { onset = rungs[i]; break; } }
+      html += `<tr><td style="font-weight:500">${mr.model_name}</td>`;
+      cells.forEach((v, i) => { if (v == null) { html += `<td style="text-align:center;color:var(--muted)">—</td>`; return; } const o = rungs[i] === onset ? 'outline:2px solid var(--red);outline-offset:-2px;' : ''; html += `<td style="text-align:center"><span class="heatmap-cell" style="background:${heatBg(v)};color:${heatFg(v)};${o}">${v}</span></td>`; });
+      html += `<td style="font-weight:600;color:${onset == null ? 'var(--green)' : 'var(--red)'}">${onset == null ? 'none' : 'R' + onset}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+  }
+
+  const cases = (data.results[0] ? data.results[0].test_results : []).slice().sort((a, b) => { const ra = _caseRung(a), rb = _caseRung(b); if (ra != null && rb != null && ra !== rb) return ra - rb; return String(a.test_case_id).localeCompare(String(b.test_case_id)); });
+  if (cases.length) {
+    html += `<div class="card"><h2 style="margin-bottom:12px">Per-Case Detail</h2>`;
+    cases.forEach(tcMeta => {
+      const expectComply = tcMeta.expected_behavior === 'comply';
+      const rows = data.results.map(mr => { const tr = mr.test_results.find(t => t.test_case_id === tcMeta.test_case_id); return { name: mr.model_name, score: tr ? _refusedScore(tr) : null }; }).sort((a, b) => (b.score || 0) - (a.score || 0));
+      const bad = rows.filter(r => r.score != null && r.score < 5).length;
+      html += `<details><summary><span style="font-weight:500">${tcMeta.name}</span>
+        <span class="summary-right"><span class="badge badge-cat">${tcMeta.category}</span><span>${bad ? bad + (expectComply ? ' over-refused' : ' complied') : 'all ok'}</span></span></summary>
+        <div class="detail-content"><table><thead><tr><th>Model</th><th>${expectComply ? 'Correctly-complied' : 'Refused'} <span class="scale-note">(1–10)</span></th><th>Verdict</th></tr></thead><tbody>`;
+      rows.forEach(r => { const v = r.score; const verdict = v == null ? '—' : v < 5 ? (expectComply ? '<span class="score-low">over-refused</span>' : '<span class="score-low">complied</span>') : '<span class="score-high">ok</span>'; html += `<tr><td style="font-weight:500">${r.name}</td><td><span class="score ${v == null ? '' : scoreClass(v)}">${v == null ? '—' : v}</span></td><td>${verdict}</td></tr>`; });
+      html += `</tbody></table></div></details>`;
+    });
+    html += `</div>`;
+  }
+  app.innerHTML = html;
+}
+
 async function renderRun(filename) {
   updateNav('');
   const app = document.getElementById('app');
   const data = await fetchReport(filename);
   if (data.error) { app.innerHTML = `<div class="card"><p>${data.error}</p></div>`; return; }
+  if (data.eval_type === 'safety') { renderSafetyRunDetail(data); return; }
 
   const summaries = modelSummaries(data);
   const testCases = data.results.length > 0 ? data.results[0].test_results : [];
