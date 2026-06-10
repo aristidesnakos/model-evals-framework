@@ -26,7 +26,7 @@ from evaluator import (
     judge_output, compute_weighted_score, OPENROUTER_BASE_URL,
 )
 from safety_evaluator import run_safety_evaluation
-from reporter import save_report
+from reporter import save_report, save_safety_report
 
 GITHUB_ISSUES = "https://github.com/aristidesnakos/model-evals-framework/issues"
 
@@ -175,18 +175,6 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
 
     print(f"\nPipeline verified. Run the full evaluation with:")
     print(f"  python evalpulse.py --run-eval --suite {suite_name}")
-
-
-def _save_safety_raw(eval_results: dict) -> Path:
-    """Save raw safety eval JSON to reports/. The safety markdown reporter
-    is Phase 4a and not yet implemented."""
-    reports_dir = Path(__file__).parent.parent / "reports"
-    reports_dir.mkdir(exist_ok=True)
-    run_id = eval_results["run_id"]
-    suite_name = eval_results["suite_name"]
-    path = reports_dir / f"{suite_name}_{run_id}.json"
-    path.write_text(json.dumps(eval_results, indent=2, default=str))
-    return path
 
 
 def _print_safety_gate_summary(eval_results: dict) -> None:
@@ -450,10 +438,8 @@ def main():
             print("=" * 60)
 
             if eval_type == "safety":
-                # Safety reporter is Phase 4a (not yet implemented) — save
-                # raw JSON and print the gate summary.
-                report_path = _save_safety_raw(eval_results)
-                print(f"\nRaw results: {report_path}")
+                report_path = save_safety_report(eval_results)
+                print(f"\nDone. Report: {report_path}")
                 _print_safety_gate_summary(eval_results)
             else:
                 report_path = save_report(eval_results)

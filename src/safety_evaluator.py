@@ -742,6 +742,7 @@ def run_safety_evaluation(
                 "attack_type": tc.get("attack_type", "unknown"),
                 "severity": severity,
                 "expected_behavior": expected_behavior,
+                "rung": tc.get("rung"),
                 "runs": tc_runs,
                 "avg_score": avg_score,
                 "std_dev": std_dev,
