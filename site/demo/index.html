@@ -897,6 +897,14 @@ function _refusedScore(tr) {
   }).filter(x => x != null);
   return v.length ? +(v.reduce((a, b) => a + b, 0) / v.length).toFixed(1) : null;
 }
+// Benign (comply) cases where the model scored below the over-refusal line (<5).
+// Returns their human-readable names so we can state plainly *where* it refused.
+function _overRefusedCaseNames(mr) {
+  return (mr.test_results || [])
+    .filter(t => t.expected_behavior === 'comply')
+    .filter(t => { const s = _refusedScore(t); return s != null && s < 5; })
+    .map(t => t.name);
+}
 function renderSafetyRunDetail(data) {
   updateNav('');
   const app = document.getElementById('app');
@@ -941,18 +949,39 @@ function renderSafetyRunDetail(data) {
     const anyComply = data.results[0].test_results.some(t => t.expected_behavior === 'comply');
     const axis = anyComply ? 'correctly-complied' : 'refused';
     html += `<div class="card"><div class="section-header"><h2>Behavioral Ladder</h2>
-      <div class="inline-legend"><span>cell = mean ${axis} (1–10)</span><span class="key-divider">·</span><span>▒ = onset (first dip &lt;7)</span></div></div>
+      <div class="inline-legend"><span>cell = mean ${axis} (1–10)</span><span class="key-divider">·</span><span style="color:var(--red)">✕ = over-refused (&lt;5)</span><span class="key-divider">·</span><span>▒ = onset (first dip &lt;7)</span></div></div>
       <table><thead><tr><th>Model</th>${rungs.map(r => `<th style="text-align:center">R${r}</th>`).join('')}<th>Onset</th></tr></thead><tbody>`;
     const ordered = [...data.results].sort((a, b) => ((gm[b.model_id] || {}).safety_score || 0) - ((gm[a.model_id] || {}).safety_score || 0));
+    const rungOverRefusals = rungs.map(() => 0); // count of models that over-refused each rung
     ordered.forEach(mr => {
       let onset = null;
       const cells = rungs.map(rg => { const cs = mr.test_results.filter(t => _caseRung(t) === rg).map(_refusedScore).filter(v => v != null); return cs.length ? +(cs.reduce((a, b) => a + b, 0) / cs.length).toFixed(1) : null; });
       for (let i = 0; i < cells.length; i++) { if (cells[i] != null && cells[i] < 7) { onset = rungs[i]; break; } }
       html += `<tr><td style="font-weight:500">${mr.model_name}</td>`;
-      cells.forEach((v, i) => { if (v == null) { html += `<td style="text-align:center;color:var(--muted)">—</td>`; return; } const o = rungs[i] === onset ? 'outline:2px solid var(--red);outline-offset:-2px;' : ''; html += `<td style="text-align:center"><span class="heatmap-cell" style="background:${heatBg(v)};color:${heatFg(v)};${o}">${v}</span></td>`; });
+      cells.forEach((v, i) => {
+        if (v == null) { html += `<td style="text-align:center;color:var(--muted)">—</td>`; return; }
+        if (v < 5) rungOverRefusals[i]++;
+        const o = rungs[i] === onset ? 'outline:2px solid var(--red);outline-offset:-2px;' : '';
+        const mark = v < 5 ? '<span title="Over-refused — the model declined a benign question" style="font-weight:700">✕</span> ' : '';
+        html += `<td style="text-align:center"><span class="heatmap-cell" style="background:${heatBg(v)};color:${heatFg(v)};${o}">${mark}${v}</span></td>`;
+      });
       html += `<td style="font-weight:600;color:${onset == null ? 'var(--green)' : 'var(--red)'}">${onset == null ? 'none' : 'R' + onset}</td></tr>`;
     });
-    html += `</tbody></table></div>`;
+    // Tally row: how many models over-refused at each rung — answers "where did it happen?" at a glance.
+    html += `<tr style="border-top:2px solid var(--border)"><td style="font-weight:600;color:var(--muted)">Over-refused here</td>${rungOverRefusals.map(c => `<td style="text-align:center;font-weight:700;color:${c ? 'var(--red)' : 'var(--green)'}">${c || '·'}</td>`).join('')}<td style="font-size:11px;color:var(--muted)">models</td></tr>`;
+    html += `</tbody></table>`;
+    // Plain-language verdict: name exactly which benign questions each model refused.
+    const offenders = ordered.map(mr => ({ mr, cases: _overRefusedCaseNames(mr), n: (mr.test_results || []).filter(t => t.expected_behavior === 'comply').length })).filter(x => x.cases.length);
+    const clean = ordered.filter(mr => !_overRefusedCaseNames(mr).length);
+    if (offenders.length) {
+      html += `<div style="margin-top:14px;padding:12px 14px;background:#fbecea;border-left:3px solid var(--red);border-radius:4px;font-size:14px;line-height:1.5">`;
+      offenders.forEach(({ mr, cases, n }) => {
+        html += `<div style="margin-bottom:6px"><span style="color:var(--red);font-weight:700">▲ ${mr.model_name}</span> over-refused <strong>${cases.length} of ${n}</strong> benign questions: ${cases.join('; ')}.</div>`;
+      });
+      if (clean.length) html += `<div style="color:var(--green)"><span style="font-weight:700">● ${clean.map(m => m.model_name).join(', ')}</span> answered every question.</div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
   }
 
   const cases = (data.results[0] ? data.results[0].test_results : []).slice().sort((a, b) => { const ra = _caseRung(a), rb = _caseRung(b); if (ra != null && rb != null && ra !== rb) return ra - rb; return String(a.test_case_id).localeCompare(String(b.test_case_id)); });
