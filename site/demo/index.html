@@ -152,6 +152,13 @@ details summary:hover { background: var(--accent-light); }
 details[open] summary { border-bottom: 1px solid var(--border); border-radius: 6px 6px 0 0; }
 details .detail-content { padding: 8px 0 4px; }
 .summary-right { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+.qa-prompt { margin: 4px 0 14px; padding: 10px 14px; background: var(--bg); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 15px; font-style: italic; color: var(--text, #1a1a1a); }
+.qa-prompt-label { display: block; font-style: normal; font-weight: 600; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.qa-answers-label { margin: 16px 0 6px; font-weight: 600; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+details.qa-ans { margin-bottom: 4px; }
+details.qa-ans summary { background: var(--paper-2, #ECE3D2); font-size: 14px; }
+.qa-answer-body { white-space: pre-wrap; word-break: break-word; max-height: 280px; overflow: auto; padding: 12px 14px; font-size: 13px; line-height: 1.55; background: var(--bg); border-radius: 0 0 6px 6px; }
+.qa-empty { padding: 12px 14px; font-style: italic; font-weight: 600; color: var(--red); background: #fbecea; border-radius: 0 0 6px 6px; }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
@@ -905,6 +912,25 @@ function _overRefusedCaseNames(mr) {
     .filter(t => { const s = _refusedScore(t); return s != null && s < 5; })
     .map(t => t.name);
 }
+// Escape user/model text before dropping it into innerHTML.
+function _escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// The benign question put to every model for a case (identical across models).
+function _casePrompt(data, tcid) {
+  for (const mr of (data.results || [])) {
+    const tr = (mr.test_results || []).find(t => t.test_case_id === tcid);
+    const turns = tr && tr.runs && tr.runs[0] && tr.runs[0].turns;
+    if (turns && turns[0] && turns[0].user) return turns[0].user;
+  }
+  return null;
+}
+// One model's actual reply for a case — '' when it returned nothing (a hard refusal).
+function _caseAnswer(tr) {
+  const turns = tr && tr.runs && tr.runs[0] && tr.runs[0].turns;
+  if (!turns || !turns.length) return '';
+  return turns[turns.length - 1].assistant || '';
+}
 function renderSafetyRunDetail(data) {
   updateNav('');
   const app = document.getElementById('app');
@@ -989,13 +1015,28 @@ function renderSafetyRunDetail(data) {
     html += `<div class="card"><h2 style="margin-bottom:12px">Per-Case Detail</h2>`;
     cases.forEach(tcMeta => {
       const expectComply = tcMeta.expected_behavior === 'comply';
-      const rows = data.results.map(mr => { const tr = mr.test_results.find(t => t.test_case_id === tcMeta.test_case_id); return { name: mr.model_name, score: tr ? _refusedScore(tr) : null }; }).sort((a, b) => (b.score || 0) - (a.score || 0));
+      const prompt = _casePrompt(data, tcMeta.test_case_id);
+      const rows = data.results.map(mr => { const tr = mr.test_results.find(t => t.test_case_id === tcMeta.test_case_id); return { name: mr.model_name, score: tr ? _refusedScore(tr) : null, answer: tr ? _caseAnswer(tr) : '' }; }).sort((a, b) => (b.score || 0) - (a.score || 0));
       const bad = rows.filter(r => r.score != null && r.score < 5).length;
       html += `<details><summary><span style="font-weight:500">${tcMeta.name}</span>
         <span class="summary-right"><span class="badge badge-cat">${tcMeta.category}</span><span>${bad ? bad + (expectComply ? ' over-refused' : ' complied') : 'all ok'}</span></span></summary>
-        <div class="detail-content"><table><thead><tr><th>Model</th><th>${expectComply ? 'Correctly-complied' : 'Refused'} <span class="scale-note">(1–10)</span></th><th>Verdict</th></tr></thead><tbody>`;
+        <div class="detail-content">`;
+      if (prompt) html += `<p class="qa-prompt"><span class="qa-prompt-label">Question put to every model</span>“${_escHtml(prompt)}”</p>`;
+      html += `<table><thead><tr><th>Model</th><th>${expectComply ? 'Correctly-complied' : 'Refused'} <span class="scale-note">(1–10)</span></th><th>Verdict</th></tr></thead><tbody>`;
       rows.forEach(r => { const v = r.score; const verdict = v == null ? '—' : v < 5 ? (expectComply ? '<span class="score-low">over-refused</span>' : '<span class="score-low">complied</span>') : '<span class="score-high">ok</span>'; html += `<tr><td style="font-weight:500">${r.name}</td><td><span class="score ${v == null ? '' : scoreClass(v)}">${v == null ? '—' : v}</span></td><td>${verdict}</td></tr>`; });
-      html += `</tbody></table></div></details>`;
+      html += `</tbody></table>`;
+      // What each model actually replied — empty reply = a hard over-refusal, shown in plain sight.
+      html += `<div class="qa-answers-label">What each model actually replied</div>`;
+      rows.forEach(r => {
+        const v = r.score;
+        const empty = !r.answer || !r.answer.trim();
+        const tag = v == null ? '' : (v < 5 ? '<span class="score-low">over-refused</span>' : '<span class="score-high">answered</span>');
+        const body = empty
+          ? `<div class="qa-empty">— model returned no answer —</div>`
+          : `<div class="qa-answer-body">${_escHtml(r.answer)}</div>`;
+        html += `<details class="qa-ans"><summary><span style="font-weight:500">${r.name}</span><span class="summary-right"><span class="score ${v == null ? '' : scoreClass(v)}">${v == null ? '—' : v}</span>${tag}</span></summary><div class="detail-content">${body}</div></details>`;
+      });
+      html += `</div></details>`;
     });
     html += `</div>`;
   }
