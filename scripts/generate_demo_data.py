@@ -526,6 +526,20 @@ def _backfill_report(data: dict, models_data: dict) -> None:
                     )
 
 
+# Curated allowlist of report filenames to publish to the public demo, newest-first.
+# Gatekeeping is explicit on purpose: reports/ is the full private audit trail, and
+# only the runs named here are surfaced on the public site (so failed, token-capped,
+# or unvetted runs never leak). Set to None to fall back to "newest N quality reports
+# by run timestamp".
+DEMO_ALLOWLIST = [
+    "swms_safety_generator_20260623_121911.json",
+    "biology_over_refusal_20260610_082550.json",
+    "school_classifier_20260416_195602.json",
+    "swms_safety_generator_20260410_162637.json",
+]
+DEMO_FALLBACK_LIMIT = 6  # used only when DEMO_ALLOWLIST is None
+
+
 def from_real_reports(reports_dir: Path) -> bool:
     # This demo dashboard renders quality / classification categories only.
     # Exclude classification sidecars and safety (jailbreak) reports — the latter
@@ -539,14 +553,47 @@ def from_real_reports(reports_dir: Path) -> bool:
         except (json.JSONDecodeError, OSError):
             return False
 
-    files = [f for f in sorted(reports_dir.glob("*.json"), reverse=True) if _is_quality_report(f)]
+    def _is_renderable(p: Path) -> bool:
+        # Allowlisted runs may be safety-typed (e.g. over-refusal) yet still carry
+        # per-test avg_score, so they render on the quality leaderboard. Only true
+        # gate-only reports (no avg_score) and classification sidecars can't.
+        if p.name.endswith("_classification.json"):
+            return False
+        try:
+            data = json.loads(p.read_text())
+        except (json.JSONDecodeError, OSError):
+            return False
+        for r in data.get("results", []):
+            for tr in r.get("test_results", []):
+                if "avg_score" in tr:
+                    return True
+        return False
+
+    if DEMO_ALLOWLIST is not None:
+        present = {p.name: p for p in reports_dir.glob("*.json")}
+        files = []
+        for name in DEMO_ALLOWLIST:
+            p = present.get(name)
+            if p is None:
+                print(f"  WARNING: allowlisted report not found, skipped: {name}")
+            elif not _is_renderable(p):
+                print(f"  WARNING: allowlisted report not renderable (no avg_score / sidecar), skipped: {name}")
+            else:
+                files.append(p)
+    else:
+        quality = {p.name: p for p in reports_dir.glob("*.json") if _is_quality_report(p)}
+        # Newest-first by the YYYYMMDD_HHMMSS timestamp embedded in the filename.
+        files = sorted(
+            quality.values(), key=lambda p: p.stem.split("_")[-2:], reverse=True
+        )[:DEMO_FALLBACK_LIMIT]
+
     if not files:
         return False
 
     models_data = json.loads((ROOT / "models.json").read_text())
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     pairs = []
-    for f in files[:4]:  # cap at 4 reports for the demo
+    for f in files:
         data = json.loads(f.read_text())
         _backfill_report(data, models_data)
         dest = OUT_DIR / f.name
