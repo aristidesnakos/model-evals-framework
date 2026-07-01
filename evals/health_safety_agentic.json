@@ -1,0 +1,47 @@
+{
+  "suite_name": "health_safety_agentic",
+  "eval_type": "agentic",
+  "modality": "text",
+  "task_type": "tool_use",
+  "description": "Multi-step tool-calling tasks against the real, keyless openFDA API: find drug recalls, cross-reference each recalled product's NDC to its actual manufacturer of record, and flag manufacturers with repeat recalls. Scored deterministically (repeat-entity grounding check), not by an LLM judge — the metrics that matter are tokens/cost/tool-calls/latency to a correct, grounded answer. No API key required for any tool in this suite, unlike construction_safety_agentic.json (OSHA_API_KEY).",
+  "runs_per_test": 3,
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "Repeat-recall manufacturer, Class I 2022-2024",
+      "category": "recall_cross_reference",
+      "goal": "Search FDA drug recalls with classification 'Class I' and report_date between 2022-01-01 and 2024-12-31. For at least 8 of the returned product_ndc codes, look up the actual manufacturer of record (labeler_name) via the NDC directory tool. Identify one manufacturer/labeler that shows up for 2 or more distinct NDCs, and name at least 2 of those NDC codes in your final answer along with the manufacturer's name. Final answer format: 'Manufacturer <labeler_name> had repeat Class I recalls across NDCs <ndc1> and <ndc2>.'",
+      "max_tool_calls": 14,
+      "required_tools": ["openfda_search_recalls", "openfda_get_ndc_manufacturer"],
+      "check_type": "repeat_entity",
+      "answer_pattern": "\\d{4,5}-\\d{3,4}",
+      "entity_lookup_tool": "openfda_get_ndc_manufacturer",
+      "entity_field": "labeler_name",
+      "min_repeats": 2
+    },
+    {
+      "id": "tc_002",
+      "name": "Repeat-recall manufacturer, Class I 2023 H2",
+      "category": "recall_cross_reference",
+      "goal": "Search FDA drug recalls with classification 'Class I' and report_date between 2023-06-01 and 2023-12-31. For at least 8 of the returned product_ndc codes, look up the actual manufacturer of record (labeler_name) via the NDC directory tool. Identify one manufacturer/labeler that shows up for 2 or more distinct NDCs, and name at least 2 of those NDC codes in your final answer along with the manufacturer's name. Final answer format: 'Manufacturer <labeler_name> had repeat Class I recalls across NDCs <ndc1> and <ndc2>.'",
+      "max_tool_calls": 14,
+      "required_tools": ["openfda_search_recalls", "openfda_get_ndc_manufacturer"],
+      "check_type": "repeat_entity",
+      "answer_pattern": "\\d{4,5}-\\d{3,4}",
+      "entity_lookup_tool": "openfda_get_ndc_manufacturer",
+      "entity_field": "labeler_name",
+      "min_repeats": 2
+    },
+    {
+      "id": "tc_003",
+      "name": "Recalling firm vs. true manufacturer discrepancy",
+      "category": "recall_cross_reference",
+      "goal": "Search FDA drug recalls with classification 'Class I' and report_date between 2024-01-01 and 2024-12-31. Pick the first result that has at least one product_ndc code. Look up that NDC's actual manufacturer of record (labeler_name) via the NDC directory tool, and compare it to the recall record's own recalling_firm field. End your response with exactly one final sentence, on its own line, in this exact format and nothing after it: 'For NDC <ndc>, the recalling firm was <recalling_firm> and the manufacturer of record is <labeler_name>.'",
+      "max_tool_calls": 8,
+      "required_tools": ["openfda_search_recalls", "openfda_get_ndc_manufacturer"],
+      "check_type": "grounded_citation",
+      "answer_pattern": "(?<!D-)\\d{4,5}-\\d{3,4}",
+      "grounding_tool": "openfda_search_recalls"
+    }
+  ]
+}

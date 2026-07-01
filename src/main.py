@@ -26,7 +26,8 @@ from evaluator import (
     judge_output, compute_weighted_score, OPENROUTER_BASE_URL,
 )
 from safety_evaluator import run_safety_evaluation
-from reporter import save_report, save_safety_report
+from agentic_evaluator import run_agentic_evaluation
+from reporter import save_report, save_safety_report, save_agentic_report
 
 GITHUB_ISSUES = "https://github.com/aristidesnakos/model-evals-framework/issues"
 
@@ -40,6 +41,9 @@ def run_dry_run(api_key: str, models: list, judge_models: list, suite_name: str)
     suite = load_suite(suite_name)
     if suite.get("eval_type") == "safety":
         _run_safety_dry_run(api_key, models, judge_models, suite_name, suite)
+        return
+    if suite.get("eval_type") == "agentic":
+        _run_agentic_dry_run(api_key, models, suite_name, suite)
         return
 
     weights = suite["scoring_weights"]
@@ -297,6 +301,53 @@ def _run_safety_dry_run(
     print(f"  python evalpulse.py --run-eval --suite {suite_name}")
 
 
+def _run_agentic_dry_run(api_key: str, models: list, suite_name: str, suite: dict) -> None:
+    """Dry-run for agentic suites: run the first test case end-to-end for
+    one model (full tool-call loop, no judge — scoring is deterministic)."""
+    from openai import OpenAI
+    from agentic_evaluator import run_agentic_task
+
+    test_cases = suite["test_cases"]
+    enabled = [m for m in models if m.get("enabled")]
+    if not enabled:
+        print("Error: No enabled models in models.json")
+        sys.exit(1)
+
+    model = enabled[0]
+    tc = test_cases[0]
+
+    print()
+    print("DRY RUN (agentic) -- verifying pipeline with 1 test case, 1 model, 1 iteration")
+    print("=" * 60)
+    print(f"Model: {model.get('name', model['id'])} ({model['id']})")
+    print(f"Test:  {tc['name']} ({tc['id']})")
+    print(f"Suite: {suite['suite_name']} (eval_type=agentic)")
+    print(f"Goal:  {tc['goal'][:150]}{'...' if len(tc['goal']) > 150 else ''}")
+
+    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+
+    print("\nRunning tool-call loop...", flush=True)
+    outcome = run_agentic_task(client, model["id"], tc)
+
+    for entry in outcome["tool_log"]:
+        print(f"\n-- Tool call: {entry['name']}({entry['arguments']})")
+        result_preview = str(entry["result"])[:300]
+        print(f"   Result: {result_preview}")
+
+    print(f"\nFinal answer: {outcome['final_answer']}")
+    print(f"Model calls: {outcome['model_calls']} | Tool calls: {outcome['tool_calls']}")
+    print(f"Tokens: {outcome['tokens']} | Latency: {outcome['latency']}s")
+    if outcome["error"]:
+        print(f"Error: {outcome['error']}")
+        print("\nHint: Agentic suites need OSHA_API_KEY set (free key at "
+              "https://dataportal.dol.gov/registration) and OPENROUTER_API_KEY.")
+        sys.exit(1)
+    print(f"Success: {outcome['success']}" + (f" ({outcome['failure_reason']})" if not outcome["success"] else ""))
+
+    print(f"\nAgentic pipeline verified. Run the full evaluation with:")
+    print(f"  python evalpulse.py --run-eval --suite {suite_name}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="EvalPulse — Automated LLM evaluation pipeline",
@@ -414,6 +465,13 @@ def main():
                     suite_name=args.suite,
                     budget=args.budget,
                 )
+            elif eval_type == "agentic":
+                eval_results = run_agentic_evaluation(
+                    api_key=api_key,
+                    models=models,
+                    suite_name=args.suite,
+                    budget=args.budget,
+                )
             else:
                 eval_results = run_evaluation(
                     api_key=api_key,
@@ -442,6 +500,9 @@ def main():
                 report_path = save_safety_report(eval_results)
                 print(f"\nDone. Report: {report_path}")
                 _print_safety_gate_summary(eval_results)
+            elif eval_type == "agentic":
+                report_path = save_agentic_report(eval_results)
+                print(f"\nDone. Report: {report_path}")
             else:
                 report_path = save_report(eval_results)
                 print(f"\nDone. Report: {report_path}")

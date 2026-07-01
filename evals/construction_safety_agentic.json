@@ -1,0 +1,37 @@
+{
+  "suite_name": "construction_safety_agentic",
+  "eval_type": "agentic",
+  "modality": "text",
+  "task_type": "tool_use",
+  "description": "Multi-step tool-calling tasks chaining real OSHA enforcement data with real eCFR regulatory text. Scored deterministically (grounded-citation check), not by an LLM judge — the metrics that matter are tokens/cost/tool-calls/latency to a correct, grounded answer, since that's what an 'efficiency' claim between models should show up in.",
+  "runs_per_test": 3,
+  "test_cases": [
+    {
+      "id": "tc_001",
+      "name": "Most-cited fall protection standard for commercial building construction",
+      "category": "compliance_research",
+      "goal": "For NAICS code 236220 (commercial building construction), look at OSHA inspections opened between 2023-01-01 and 2023-12-31. Identify the most frequently cited OSHA standard among those inspections, then fetch the actual regulatory text of that standard from 29 CFR Part 1926 (use as_of_date 2023-12-31) and tell me, in one sentence, what it requires. Give your final answer as: 'The most-cited standard is <CFR citation, e.g. 1926.501>: <one-sentence summary of the requirement>.'",
+      "max_tool_calls": 6,
+      "required_tools": ["osha_search_inspections", "ecfr_get_section_text"],
+      "answer_pattern": "1926\\.\\d{3}"
+    },
+    {
+      "id": "tc_002",
+      "name": "Scaffold violation standard lookup",
+      "category": "compliance_research",
+      "goal": "For NAICS code 238910 (site preparation contractors), look at OSHA inspections opened between 2022-06-01 and 2022-12-31. Find the most frequently cited standard related to scaffolding, then fetch its text from 29 CFR Part 1926 (as_of_date 2022-12-31) and summarize the core requirement in one sentence. Final answer format: 'The most-cited scaffolding standard is <CFR citation>: <summary>.'",
+      "max_tool_calls": 6,
+      "required_tools": ["osha_search_inspections", "ecfr_get_section_text"],
+      "answer_pattern": "1926\\.\\d{3}"
+    },
+    {
+      "id": "tc_003",
+      "name": "Excavation hazard standard lookup",
+      "category": "compliance_research",
+      "goal": "For NAICS code 237310 (highway, street, and bridge construction), look at OSHA inspections opened between 2023-01-01 and 2023-06-30. Find the most frequently cited standard related to excavations, then fetch its text from 29 CFR Part 1926 (as_of_date 2023-06-30) and summarize the core requirement in one sentence. Final answer format: 'The most-cited excavation standard is <CFR citation>: <summary>.'",
+      "max_tool_calls": 6,
+      "required_tools": ["osha_search_inspections", "ecfr_get_section_text"],
+      "answer_pattern": "1926\\.\\d{3}"
+    }
+  ]
+}

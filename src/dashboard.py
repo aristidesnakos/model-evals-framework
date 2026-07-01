@@ -45,13 +45,15 @@ def start_dashboard(port: int, reports_dir: Path):
                         if scores:
                             model_scores.append({"name": r["model_name"], "avg": round(sum(scores) / len(scores), 1)})
                     model_scores.sort(key=lambda x: x["avg"], reverse=True)
+                    model_ids = {r.get("model_id") for r in data.get("results", []) if r.get("model_id")}
                     reports.append({
                         "filename": f.name,
                         "run_id": data.get("run_id", ""),
                         "suite_name": data.get("suite_name", ""),
-                        "model_count": len(data.get("results", [])),
+                        "eval_type": data.get("eval_type", "quality"),
+                        "model_count": len(model_ids) if model_ids else len(data.get("results", [])),
                         "top_model": model_scores[0] if model_scores else None,
-                        "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else [0, 0],
+                        "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else None,
                     })
                 except (json.JSONDecodeError, KeyError):
                     continue
@@ -171,6 +173,15 @@ tr:hover td { background: var(--accent-light); }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
 .badge-suite { background: #ede9fe; color: #7c3aed; }
 .badge-cat { background: #e0f2fe; color: #0284c7; }
+.badge-quality { background: #e0f2fe; color: #0284c7; }
+.badge-safety { background: #fee2e2; color: #b91c1c; }
+.badge-agentic { background: #dcfce7; color: #15803d; }
+
+/* Eval-type filter pills — index page */
+.type-filter { display: flex; gap: 8px; margin-bottom: 16px; }
+.type-filter button { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; }
+.type-filter button:hover { border-color: var(--accent); color: var(--accent); }
+.type-filter button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 
 /* Meta row */
 .meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
@@ -253,6 +264,8 @@ async function fetchReport(filename) {
 }
 
 function scoreClass(v) { return v >= 7 ? 'score-high' : v >= 5 ? 'score-mid' : 'score-low'; }
+function evalTypeBadge(t) { return `<span class="badge badge-${t}">${t}</span>`; }
+let typeFilter = 'all';
 function fmtDate(runId) {
   if (!runId || runId.length < 15) return runId || '';
   return runId.slice(0,4)+'-'+runId.slice(4,6)+'-'+runId.slice(6,8)+' '+runId.slice(9,11)+':'+runId.slice(11,13)+' UTC';
@@ -346,24 +359,24 @@ async function renderIndex() {
 
   const uniqueSuites = new Set(reports.map(r => r.suite_name)).size;
   const totalModelEvals = reports.reduce((s, r) => s + r.model_count, 0);
+  const typeCounts = { quality: 0, safety: 0, agentic: 0 };
+  reports.forEach(r => { typeCounts[r.eval_type] = (typeCounts[r.eval_type] || 0) + 1; });
 
-  const rows = reports.map(r => {
-    const min = r.score_range[0], max = r.score_range[1];
-    const leftPct = (min / 10 * 100).toFixed(1);
-    const widthPct = ((max - min) / 10 * 100).toFixed(1);
-    const fillColor = max >= 7 ? 'var(--green)' : max >= 5 ? 'var(--amber)' : 'var(--red)';
+  const visible = typeFilter === 'all' ? reports : reports.filter(r => r.eval_type === typeFilter);
+
+  const rows = visible.map(r => {
+    const range = r.score_range ? `<div class="range-bar-wrap">
+          <div class="range-bar-track"><div class="range-bar-fill" style="left:${(r.score_range[0]/10*100).toFixed(1)}%;width:${((r.score_range[1]-r.score_range[0])/10*100).toFixed(1)}%;background:${r.score_range[1]>=7?'var(--green)':r.score_range[1]>=5?'var(--amber)':'var(--red)'}"></div></div>
+          <span class="range-text">${r.score_range[0]}–${r.score_range[1]}</span>
+        </div>` : '—';
     return `<tr>
       <td><input type="checkbox" data-file="${r.filename}" onchange="toggleSelect(this)" ${selected.has(r.filename)?'checked':''}></td>
       <td><a href="#/run/${r.filename}" style="color:var(--accent);text-decoration:none;font-weight:500">${fmtDate(r.run_id)}</a></td>
+      <td>${evalTypeBadge(r.eval_type)}</td>
       <td><span class="badge badge-suite">${r.suite_name}</span></td>
       <td style="text-align:center">${r.model_count}</td>
       <td>${r.top_model ? `<span class="score ${scoreClass(r.top_model.avg)}">${r.top_model.avg}</span> <span style="color:var(--muted);font-size:12px">${r.top_model.name}</span>` : '—'}</td>
-      <td>
-        <div class="range-bar-wrap">
-          <div class="range-bar-track"><div class="range-bar-fill" style="left:${leftPct}%;width:${widthPct}%;background:${fillColor}"></div></div>
-          <span class="range-text">${min}–${max}</span>
-        </div>
-      </td>
+      <td>${range}</td>
     </tr>`;
   }).join('');
 
@@ -373,20 +386,28 @@ async function renderIndex() {
     <div class="hero-stat"><span class="hero-num">${uniqueSuites}</span><span class="hero-label">Suites</span></div>
     <div class="hero-stat"><span class="hero-num">${totalModelEvals}</span><span class="hero-label">Model Evaluations</span></div>
   </div>
+  <div class="type-filter">
+    <button class="${typeFilter==='all'?'active':''}" onclick="setTypeFilter('all')">All (${reports.length})</button>
+    <button class="${typeFilter==='quality'?'active':''}" onclick="setTypeFilter('quality')">Quality (${typeCounts.quality||0})</button>
+    <button class="${typeFilter==='safety'?'active':''}" onclick="setTypeFilter('safety')">Safety (${typeCounts.safety||0})</button>
+    <button class="${typeFilter==='agentic'?'active':''}" onclick="setTypeFilter('agentic')">Agentic (${typeCounts.agentic||0})</button>
+  </div>
   <div class="card">
     <div class="section-header">
       <h2>Evaluation Runs</h2>
-      <div class="inline-legend">Scores 1–10 · dual LLM judges · select rows to compare</div>
+      <div class="inline-legend">Quality: 1–10 dual LLM judges · Safety: deploy-gate tiers · Agentic: grounded success rate</div>
     </div>
     <table><thead><tr>
       <th width="30"></th>
-      <th>Date</th><th>Suite</th>
+      <th>Date</th><th>Type</th><th>Suite</th>
       <th style="text-align:center">Models</th>
       <th>Leader <span class="scale-note">(1–10)</span></th>
       <th>Score Range</th>
     </tr></thead><tbody>${rows}</tbody></table>
   </div>`;
 }
+
+function setTypeFilter(t) { typeFilter = t; renderIndex(); }
 
 function toggleSelect(cb) {
   if (cb.checked) selected.add(cb.dataset.file); else selected.delete(cb.dataset.file);
@@ -399,6 +420,7 @@ async function renderRun(filename) {
   const data = await fetchReport(filename);
   if (data.error) { app.innerHTML = `<div class="card"><p>${data.error}</p></div>`; return; }
   if (data.eval_type === 'safety') { renderSafetyRun(data); return; }
+  if (data.eval_type === 'agentic') { renderAgenticRun(data); return; }
 
   const summaries = modelSummaries(data);
   const testCases = data.results.length > 0 ? data.results[0].test_results : [];
@@ -929,6 +951,155 @@ function renderSafetyRun(data) {
   app.innerHTML = html;
 }
 
+// --- AGENTIC RENDERER ---
+// Agentic reports have no LLM judge scores — results[] is a flat list of
+// per (model, test_case, run) records with a deterministic pass/fail
+// (`success`) plus efficiency metrics (model_calls/tool_calls/tokens/cost/
+// latency). "Best" means fewest wasted tool calls to a correct grounded
+// answer, not a 1-10 score.
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function truncateJson(obj, max) {
+  const s = JSON.stringify(obj);
+  return s && s.length > max ? s.slice(0, max) + '… (truncated)' : (s || '');
+}
+function rateClass(pct) { return pct >= 90 ? 'score-high' : pct >= 60 ? 'score-mid' : 'score-low'; }
+
+function agenticModelSummaries(data) {
+  const byModel = new Map();
+  data.results.forEach(r => {
+    if (!byModel.has(r.model_id)) byModel.set(r.model_id, { id: r.model_id, name: r.model_name, runs: [] });
+    byModel.get(r.model_id).runs.push(r);
+  });
+  return [...byModel.values()].map(m => {
+    const n = m.runs.length;
+    const successes = m.runs.filter(r => r.success).length;
+    const sum = k => m.runs.reduce((a, r) => a + (r[k] || 0), 0);
+    const tokensSum = m.runs.reduce((a, r) => a + (r.tokens?.input || 0) + (r.tokens?.output || 0), 0);
+    return {
+      id: m.id, name: m.name, n,
+      successRate: n ? Math.round(successes / n * 100) : 0,
+      avgModelCalls: n ? +(sum('model_calls') / n).toFixed(1) : 0,
+      avgToolCalls: n ? +(sum('tool_calls') / n).toFixed(1) : 0,
+      avgTokens: n ? Math.round(tokensSum / n) : 0,
+      avgCost: n ? sum('cost') / n : 0,
+      avgLatency: n ? +(sum('latency') / n).toFixed(1) : 0,
+    };
+  }).sort((a, b) => b.successRate - a.successRate || a.avgToolCalls - b.avgToolCalls);
+}
+
+function renderAgenticRun(data) {
+  updateNav('');
+  const app = document.getElementById('app');
+  const summaries = agenticModelSummaries(data);
+  const testCaseIds = [...new Set(data.results.map(r => r.test_case_id))];
+  const overallSuccess = data.results.length
+    ? Math.round(data.results.filter(r => r.success).length / data.results.length * 100) : 0;
+
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> <span class="badge badge-suite">${esc(data.suite_name)}</span></span>
+      <span><strong>Type</strong> ${evalTypeBadge('agentic')}</span>
+      <span><strong>Date</strong> ${fmtDate(data.run_id)}</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num ${rateClass(overallSuccess)}">${overallSuccess}%</span><span class="hero-label">Overall Success</span></div>
+      <div class="hero-stat"><span class="hero-num">${summaries.length}</span><span class="hero-label">Models</span></div>
+      <div class="hero-stat"><span class="hero-num">${testCaseIds.length}</span><span class="hero-label">Test Cases</span></div>
+      <div class="hero-stat"><span class="hero-num">${data.results.length}</span><span class="hero-label">Total Runs</span></div>
+    </div>
+    <div class="inline-legend">
+      <span>Scored deterministically (grounded-citation check), not by an LLM judge</span>
+      <span class="key-divider">·</span>
+      <span>Efficiency = fewest wasted tool calls to a correct, grounded answer</span>
+    </div>
+  </div>`;
+
+  html += `<div class="card card-primary">
+    <div class="section-header"><h2>Model Leaderboard</h2>
+      <div class="inline-legend">sorted by success rate, then fewest tool calls</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Success Rate</th>
+      <th>Avg Model Calls</th><th>Avg Tool Calls</th><th>Avg Tokens</th><th>Avg Cost</th><th>Avg Latency</th>
+    </tr></thead><tbody>`;
+  summaries.forEach((m, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i+1}</td>
+      <td style="font-weight:500">${esc(m.name)}</td>
+      <td><span class="score ${rateClass(m.successRate)}">${m.successRate}%</span></td>
+      <td>${m.avgModelCalls}</td>
+      <td>${m.avgToolCalls}</td>
+      <td>${m.avgTokens.toLocaleString()}</td>
+      <td>${fmtCost(m.avgCost)}</td>
+      <td>${m.avgLatency}s</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  // Per-test-case detail, grouped by test case then by model
+  html += '<div class="card"><h2 style="margin-bottom:12px">Per-Test-Case Results</h2>';
+  testCaseIds.forEach(tcId => {
+    const tcResults = data.results.filter(r => r.test_case_id === tcId);
+    const tcName = tcResults[0].test_case_name || tcId;
+    const tcSuccessRate = Math.round(tcResults.filter(r => r.success).length / tcResults.length * 100);
+
+    html += `<div class="category-group">
+      <span class="badge badge-cat">${esc(tcName)}</span>
+      <span class="category-group-stats">
+        <span class="score ${rateClass(tcSuccessRate)}" style="font-weight:600">${tcSuccessRate}%</span>
+        success · ${tcResults.length} run${tcResults.length > 1 ? 's' : ''}
+      </span>
+    </div>`;
+
+    const byModelForTc = new Map();
+    tcResults.forEach(r => {
+      if (!byModelForTc.has(r.model_id)) byModelForTc.set(r.model_id, []);
+      byModelForTc.get(r.model_id).push(r);
+    });
+
+    byModelForTc.forEach((runs, modelId) => {
+      const passCount = runs.filter(r => r.success).length;
+      html += `<details><summary>
+        <span style="font-weight:500">${esc(runs[0].model_name)}</span>
+        <span class="summary-right"><span>${passCount}/${runs.length} passed</span></span>
+      </summary>
+      <div class="detail-content">`;
+      runs.forEach(r => {
+        const statusHtml = r.success
+          ? '<span class="score-high">PASS</span>'
+          : `<span class="score-low">FAIL</span> <span style="color:var(--muted);font-size:12px">— ${esc(r.failure_reason || r.error || 'unknown')}</span>`;
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <span>Run ${r.run}: ${statusHtml}</span>
+            <span style="font-size:12px;color:var(--muted)">${r.model_calls} model calls · ${r.tool_calls} tool calls · ${((r.tokens?.input||0)+(r.tokens?.output||0)).toLocaleString()} tokens · ${fmtCost(r.cost||0)} · ${r.latency}s</span>
+          </div>`;
+        if (r.final_answer) {
+          html += `<div style="margin-top:8px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px;white-space:pre-wrap">${esc(r.final_answer)}</div>`;
+        }
+        if (r.rescore_note) {
+          html += `<div style="margin-top:6px;font-size:12px;color:var(--muted)"><strong>Rescore note:</strong> ${esc(r.rescore_note)}</div>`;
+        }
+        if (r.tool_log && r.tool_log.length) {
+          html += `<details style="margin-top:6px"><summary style="font-size:12px;background:none;padding:4px 0">${r.tool_log.length} tool call${r.tool_log.length>1?'s':''}</summary>
+            <div class="detail-content">${r.tool_log.map(t => `<div style="font-size:12px;font-family:monospace;padding:6px 0;border-bottom:1px solid var(--border)">
+              <strong>${esc(t.name)}</strong>(${esc(truncateJson(t.arguments, 300))})
+              <div style="color:var(--muted);white-space:pre-wrap;margin-top:2px">${esc(truncateJson(t.result, 600))}</div>
+            </div>`).join('')}</div>
+          </details>`;
+        }
+        html += '</div>';
+      });
+      html += '</div></details>';
+    });
+  });
+  html += '</div>';
+
+  app.innerHTML = html;
+}
+
 async function renderCompare() {
   updateNav('');
   const app = document.getElementById('app');
@@ -954,7 +1125,7 @@ async function renderCompare() {
     run.results.forEach(mr => {
       if (!allModels.has(mr.model_id)) allModels.set(mr.model_id, { name: mr.model_name, scores: [] });
       const entry = allModels.get(mr.model_id);
-      const scores = mr.test_results.filter(t=>t.avg_score>0).map(t=>t.avg_score);
+      const scores = (mr.test_results || []).filter(t=>t.avg_score>0).map(t=>t.avg_score);
       entry.scores[ri] = scores.length ? +(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 0;
     });
   });

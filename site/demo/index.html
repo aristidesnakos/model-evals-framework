@@ -95,6 +95,16 @@ tr:hover td { background: var(--accent-light); }
 .badge-mod { background: transparent; color: var(--muted); border-color: var(--border); }
 .badge-mod-vision { background: transparent; color: var(--accent-dark, #1D4ED8); border-color: rgba(37,99,235,0.3); }
 .badge-mod-text { background: transparent; color: var(--muted); border-color: var(--border); }
+.badge-quality { background: transparent; color: var(--accent-dark, #1D4ED8); border-color: rgba(37,99,235,0.3); }
+.badge-safety { background: transparent; color: var(--red); border-color: rgba(178,58,46,0.35); }
+.badge-agentic { background: transparent; color: var(--green); border-color: rgba(47,125,79,0.4); }
+.cat-tab-new { font-family: var(--font-mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; padding: 1px 6px; border-radius: var(--radius); background: var(--green); color: #fff; }
+
+/* Eval-type filter pills — Runs list */
+.type-filter { display: flex; gap: 8px; margin-bottom: 16px; }
+.type-filter button { padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+.type-filter button:hover { border-color: var(--accent); color: var(--accent); }
+.type-filter button.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 
 /* Category tabs (leaderboard selector) */
 .cat-tabs { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -337,7 +347,7 @@ async function renderLeaderboard() {
   const tabs = cats.map(c => `
     <button class="cat-tab ${c.key === selectedCat ? 'active' : ''}" onclick="selectCat('${c.key}')">
       <span class="cat-tab-mod cat-mod-${c.modality}">${c.modality === 'vision' ? 'Vision' : 'Text'}</span>
-      <span class="cat-tab-label">${c.label.split(' · ')[1] || c.label}</span>
+      <span class="cat-tab-label">${c.label.split(' · ')[1] || c.label}${c.isNew ? ' <span class="cat-tab-new">New</span>' : ''}</span>
       <span class="cat-tab-count">${c.reportCount} run${c.reportCount > 1 ? 's' : ''}</span>
     </button>`).join('');
   app.innerHTML = `<div class="cat-tabs">${tabs}</div><div id="cat-body"></div>`;
@@ -347,6 +357,8 @@ async function renderLeaderboard() {
     renderGateCategory(body, cat);
   } else if (cat.metric_kind === 'safety_gate') {
     renderSafetyCategory(body, cat);
+  } else if (cat.metric_kind === 'agentic') {
+    renderAgenticCategory(body, cat);
   } else {
     renderQualityCategory(body, cat);
   }
@@ -824,6 +836,87 @@ function renderSafetyCategory(app, cat) {
   });
 }
 
+// --- Agentic category (tool-calling, deterministic grounded-citation scoring) ---
+function renderAgenticCategory(app, cat) {
+  const rows = cat.agentic || [];
+  if (!rows.length) { app.innerHTML = '<div class="empty-state"><h2>No agentic data in this category</h2></div>'; return; }
+  const n = rows.length;
+  const avgSuccess = rows.reduce((a, r) => a + r.successRate, 0) / n;
+  const mostEfficient = rows.reduce((a, r) =>
+    r.successRate === a.successRate ? (r.avgToolCalls < a.avgToolCalls ? r : a) : (r.successRate > a.successRate ? r : a), rows[0]);
+
+  let html = `<div class="card">
+    <div class="meta">
+      <span><strong>Suite</strong> ${cat.suites.map(s => `<span class="badge badge-suite">${s}</span>`).join(' ')}</span>
+      <span><strong>Task</strong> multi-step tool-calling against real, unmocked APIs</span>
+      <span><strong>Cases</strong> ${rows[0].n} runs/model</span>
+      <span><strong>Scoring</strong> deterministic grounded-citation check (no LLM judge)</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="hero-num">${n}</span><span class="hero-label">Models</span></div>
+      <div class="hero-stat"><span class="hero-num" style="color:var(--green)">${(avgSuccess * 100).toFixed(0)}%</span><span class="hero-label">Avg Success Rate</span></div>
+      <div class="hero-stat"><span class="hero-num" style="font-family:var(--font-serif)">${mostEfficient.name}</span><span class="hero-label">Most Efficient</span></div>
+    </div>
+    <div class="calibration-note"><strong>What "efficiency" means here.</strong> Success is scored deterministically — the model's final answer must cite a value its own tool calls actually surfaced, not something guessed from training data. Among models that succeed equally often, fewer wasted tool calls to reach that answer is the efficiency signal, not lowest dollar cost.</div>
+  </div>`;
+
+  html += `<div class="card card-primary">
+    <div class="section-header">
+      <h2>Success Rate</h2>
+      <div class="inline-legend">Higher is better &middot; share of tasks completed with a grounded, correct answer</div>
+    </div>
+    <div class="chart-container" style="height:${Math.max(180, n * 52)}px"><canvas id="agentic-bar"></canvas></div>
+  </div>`;
+
+  html += `<div class="card">
+    <div class="section-header">
+      <h2>Efficiency Leaderboard</h2>
+      <div class="inline-legend">sorted by success rate, then fewest tool calls</div>
+    </div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Success Rate</th>
+      <th>Avg Model Calls</th><th>Avg Tool Calls</th><th>Avg Tokens</th><th>Avg Cost</th><th>Avg Latency</th>
+    </tr></thead><tbody>`;
+  rows.forEach((r, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i + 1}</td>
+      <td style="font-weight:500">${r.name}</td>
+      <td style="color:${rateColor(r.successRate, false)};font-weight:600">${fmtRate(r.successRate)}</td>
+      <td>${r.avgModelCalls}</td>
+      <td>${r.avgToolCalls}</td>
+      <td>${r.avgTokens.toLocaleString()}</td>
+      <td style="font-variant-numeric:tabular-nums">${fmtCost(r.avgCost)}</td>
+      <td style="font-variant-numeric:tabular-nums">${r.avgLatency}s</td>
+    </tr>`;
+  });
+  html += `</tbody></table></div>`;
+  app.innerHTML = html;
+
+  new Chart(document.getElementById('agentic-bar'), {
+    type: 'bar',
+    data: {
+      labels: rows.map(r => r.name),
+      datasets: [{
+        data: rows.map(r => +(r.successRate * 100).toFixed(1)),
+        backgroundColor: rows.map(r => r.successRate >= 0.9 ? '#2F7D4F' : r.successRate >= 0.6 ? '#B07A1E' : '#B23A2E'),
+        borderRadius: 4, barThickness: 28,
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { min: 0, max: 100, grid: { color: '#EAE0CE' }, ticks: { callback: v => v + '%' } },
+        y: { grid: { display: false } }
+      },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw}% success` } } }
+    }
+  });
+}
+
+let typeFilter = 'all';
+function setTypeFilter(t) { typeFilter = t; renderRunsList(); }
+function evalTypeBadge(t) { return `<span class="badge badge-${t}">${t}</span>`; }
+
 async function renderRunsList() {
   updateNav('runs');
   const app = document.getElementById('app');
@@ -836,15 +929,20 @@ async function renderRunsList() {
 
   const uniqueSuites = new Set(reports.map(r => r.suite_name)).size;
   const totalModelEvals = reports.reduce((s, r) => s + r.model_count, 0);
+  const typeCounts = { quality: 0, safety: 0, agentic: 0 };
+  reports.forEach(r => { const t = r.eval_type || 'quality'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
 
-  const rows = reports.map(r => {
-    const min = r.score_range[0], max = r.score_range[1];
-    const leftPct = (min / 10 * 100).toFixed(1);
-    const widthPct = ((max - min) / 10 * 100).toFixed(1);
-    const fillColor = max >= 7 ? 'var(--green)' : max >= 5 ? 'var(--amber)' : 'var(--red)';
+  const visible = typeFilter === 'all' ? reports : reports.filter(r => (r.eval_type || 'quality') === typeFilter);
+
+  const rows = visible.map(r => {
+    const range = r.score_range ? `<div class="range-bar-wrap">
+          <div class="range-bar-track"><div class="range-bar-fill" style="left:${(r.score_range[0]/10*100).toFixed(1)}%;width:${((r.score_range[1]-r.score_range[0])/10*100).toFixed(1)}%;background:${r.score_range[1]>=7?'var(--green)':r.score_range[1]>=5?'var(--amber)':'var(--red)'}"></div></div>
+          <span class="range-text">${r.score_range[0]}\u2013${r.score_range[1]}</span>
+        </div>` : '\u2014';
     return `<tr>
       <td><input type="checkbox" data-file="${r.filename}" onchange="toggleSelect(this)" ${selected.has(r.filename)?'checked':''}></td>
       <td><a href="#/run/${r.filename}" style="color:var(--accent);text-decoration:none;font-weight:500">${fmtDate(r.run_id)}</a></td>
+      <td>${evalTypeBadge(r.eval_type || 'quality')}</td>
       <td>
         <span class="badge badge-suite">${r.suite_name}</span>
         ${r.modality ? `<span class="badge badge-mod badge-mod-${r.modality}">${r.modality === 'vision' ? 'vision' : 'text'}</span>` : ''}
@@ -852,12 +950,7 @@ async function renderRunsList() {
       </td>
       <td style="text-align:center">${r.model_count}</td>
       <td>${r.top_model ? `<span class="score ${scoreClass(r.top_model.avg)}">${r.top_model.avg}</span> <span style="color:var(--muted);font-size:12px">${r.top_model.name}</span>` : '\u2014'}</td>
-      <td>
-        <div class="range-bar-wrap">
-          <div class="range-bar-track"><div class="range-bar-fill" style="left:${leftPct}%;width:${widthPct}%;background:${fillColor}"></div></div>
-          <span class="range-text">${min}\u2013${max}</span>
-        </div>
-      </td>
+      <td>${range}</td>
     </tr>`;
   }).join('');
 
@@ -867,14 +960,20 @@ async function renderRunsList() {
     <div class="hero-stat"><span class="hero-num">${uniqueSuites}</span><span class="hero-label">Suites</span></div>
     <div class="hero-stat"><span class="hero-num">${totalModelEvals}</span><span class="hero-label">Model Evaluations</span></div>
   </div>
+  <div class="type-filter">
+    <button class="${typeFilter==='all'?'active':''}" onclick="setTypeFilter('all')">All (${reports.length})</button>
+    <button class="${typeFilter==='quality'?'active':''}" onclick="setTypeFilter('quality')">Quality (${typeCounts.quality||0})</button>
+    <button class="${typeFilter==='safety'?'active':''}" onclick="setTypeFilter('safety')">Safety (${typeCounts.safety||0})</button>
+    <button class="${typeFilter==='agentic'?'active':''}" onclick="setTypeFilter('agentic')">Agentic (${typeCounts.agentic||0})</button>
+  </div>
   <div class="card">
     <div class="section-header">
       <h2>Evaluation Runs</h2>
-      <div class="inline-legend">Scores 1\u201310 \u00b7 dual LLM judges \u00b7 select rows to compare</div>
+      <div class="inline-legend">Quality: 1\u201310 dual LLM judges \u00b7 Safety: deploy-gate tiers \u00b7 Agentic: grounded success rate</div>
     </div>
     <table><thead><tr>
       <th width="30"></th>
-      <th>Date</th><th>Suite</th>
+      <th>Date</th><th>Type</th><th>Suite</th>
       <th style="text-align:center">Models</th>
       <th>Leader <span class="scale-note">(1\u201310)</span></th>
       <th>Score Range</th>
@@ -1043,12 +1142,139 @@ function renderSafetyRunDetail(data) {
   app.innerHTML = html;
 }
 
+// Agentic run detail (eval_type=agentic): flat per (model, test_case, run)
+// records with deterministic success + efficiency metrics, no LLM judge scores.
+function _truncateJson(obj, max) {
+  const s = JSON.stringify(obj);
+  return s && s.length > max ? s.slice(0, max) + '… (truncated)' : (s || '');
+}
+function _agenticModelSummaries(data) {
+  const byModel = new Map();
+  data.results.forEach(r => {
+    if (!byModel.has(r.model_id)) byModel.set(r.model_id, { id: r.model_id, name: r.model_name, runs: [] });
+    byModel.get(r.model_id).runs.push(r);
+  });
+  return [...byModel.values()].map(m => {
+    const n = m.runs.length;
+    const sum = k => m.runs.reduce((a, r) => a + (r[k] || 0), 0);
+    const tokensSum = m.runs.reduce((a, r) => a + (r.tokens?.input || 0) + (r.tokens?.output || 0), 0);
+    return {
+      id: m.id, name: m.name, n,
+      successRate: n ? Math.round(m.runs.filter(r => r.success).length / n * 100) : 0,
+      avgModelCalls: n ? +(sum('model_calls') / n).toFixed(1) : 0,
+      avgToolCalls: n ? +(sum('tool_calls') / n).toFixed(1) : 0,
+      avgTokens: n ? Math.round(tokensSum / n) : 0,
+      avgCost: n ? sum('cost') / n : 0,
+      avgLatency: n ? +(sum('latency') / n).toFixed(1) : 0,
+    };
+  }).sort((a, b) => b.successRate - a.successRate || a.avgToolCalls - b.avgToolCalls);
+}
+function _agenticRateColor(pct) { return pct >= 90 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--red)'; }
+function renderAgenticRunDetail(data) {
+  updateNav('');
+  const app = document.getElementById('app');
+  const summaries = _agenticModelSummaries(data);
+  const testCaseIds = [...new Set(data.results.map(r => r.test_case_id))];
+  const overallSuccess = data.results.length
+    ? Math.round(data.results.filter(r => r.success).length / data.results.length * 100) : 0;
+
+  let html = `<div class="card"><div class="meta">
+    <span><strong>Suite</strong> <span class="badge badge-suite">${_escHtml(data.suite_name)}</span></span>
+    <span><strong>Type</strong> <span class="badge badge-agentic">agentic</span></span>
+    <span><strong>Date</strong> ${fmtDate(data.run_id)}</span>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><span class="hero-num" style="color:${_agenticRateColor(overallSuccess)}">${overallSuccess}%</span><span class="hero-label">Overall Success</span></div>
+    <div class="hero-stat"><span class="hero-num">${summaries.length}</span><span class="hero-label">Models</span></div>
+    <div class="hero-stat"><span class="hero-num">${testCaseIds.length}</span><span class="hero-label">Test Cases</span></div>
+    <div class="hero-stat"><span class="hero-num">${data.results.length}</span><span class="hero-label">Total Runs</span></div>
+  </div>
+  <div class="calibration-note">Scored deterministically (grounded-citation check), not by an LLM judge. Efficiency = fewest wasted tool calls to a correct, grounded answer.</div>
+  </div>`;
+
+  html += `<div class="card card-primary"><div class="section-header"><h2>Model Leaderboard</h2>
+    <div class="inline-legend">sorted by success rate, then fewest tool calls</div></div>
+    <table><thead><tr>
+      <th>#</th><th>Model</th><th>Success Rate</th>
+      <th>Avg Model Calls</th><th>Avg Tool Calls</th><th>Avg Tokens</th><th>Avg Cost</th><th>Avg Latency</th>
+    </tr></thead><tbody>`;
+  summaries.forEach((m, i) => {
+    html += `<tr>
+      <td style="color:var(--muted);font-weight:500">${i+1}</td>
+      <td style="font-weight:500">${_escHtml(m.name)}</td>
+      <td style="color:${_agenticRateColor(m.successRate)};font-weight:600">${m.successRate}%</td>
+      <td>${m.avgModelCalls}</td>
+      <td>${m.avgToolCalls}</td>
+      <td>${m.avgTokens.toLocaleString()}</td>
+      <td style="font-variant-numeric:tabular-nums">${fmtCost(m.avgCost)}</td>
+      <td style="font-variant-numeric:tabular-nums">${m.avgLatency}s</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+
+  html += '<div class="card"><h2 style="margin-bottom:12px">Per-Test-Case Results</h2>';
+  testCaseIds.forEach(tcId => {
+    const tcResults = data.results.filter(r => r.test_case_id === tcId);
+    const tcName = tcResults[0].test_case_name || tcId;
+    const tcSuccessRate = Math.round(tcResults.filter(r => r.success).length / tcResults.length * 100);
+    html += `<div class="category-group">
+      <span class="badge badge-cat">${_escHtml(tcName)}</span>
+      <span class="category-group-stats">
+        <span style="font-weight:600;color:${_agenticRateColor(tcSuccessRate)}">${tcSuccessRate}%</span>
+        success &middot; ${tcResults.length} run${tcResults.length > 1 ? 's' : ''}
+      </span>
+    </div>`;
+
+    const byModelForTc = new Map();
+    tcResults.forEach(r => {
+      if (!byModelForTc.has(r.model_id)) byModelForTc.set(r.model_id, []);
+      byModelForTc.get(r.model_id).push(r);
+    });
+    byModelForTc.forEach((runs, modelId) => {
+      const passCount = runs.filter(r => r.success).length;
+      html += `<details><summary>
+        <span style="font-weight:500">${_escHtml(runs[0].model_name)}</span>
+        <span class="summary-right"><span>${passCount}/${runs.length} passed</span></span>
+      </summary><div class="detail-content">`;
+      runs.forEach(r => {
+        const statusHtml = r.success
+          ? '<span class="score-high">PASS</span>'
+          : `<span class="score-low">FAIL</span> <span style="color:var(--muted);font-size:12px">— ${_escHtml(r.failure_reason || r.error || 'unknown')}</span>`;
+        html += `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <span>Run ${r.run}: ${statusHtml}</span>
+            <span style="font-size:12px;color:var(--muted)">${r.model_calls} model calls &middot; ${r.tool_calls} tool calls &middot; ${((r.tokens?.input||0)+(r.tokens?.output||0)).toLocaleString()} tokens &middot; ${fmtCost(r.cost||0)} &middot; ${r.latency}s</span>
+          </div>`;
+        if (r.final_answer) {
+          html += `<div style="margin-top:8px;padding:10px 12px;background:var(--bg);border-radius:6px;font-size:13px;white-space:pre-wrap">${_escHtml(r.final_answer)}</div>`;
+        }
+        if (r.rescore_note) {
+          html += `<div style="margin-top:6px;font-size:12px;color:var(--muted)"><strong>Rescore note:</strong> ${_escHtml(r.rescore_note)}</div>`;
+        }
+        if (r.tool_log && r.tool_log.length) {
+          html += `<details style="margin-top:6px"><summary style="font-size:12px;background:none;padding:4px 0">${r.tool_log.length} tool call${r.tool_log.length>1?'s':''}</summary>
+            <div class="detail-content">${r.tool_log.map(t => `<div style="font-size:12px;font-family:var(--font-mono);padding:6px 0;border-bottom:1px solid var(--border)">
+              <strong>${_escHtml(t.name)}</strong>(${_escHtml(_truncateJson(t.arguments, 300))})
+              <div style="color:var(--muted);white-space:pre-wrap;margin-top:2px">${_escHtml(_truncateJson(t.result, 600))}</div>
+            </div>`).join('')}</div>
+          </details>`;
+        }
+        html += '</div>';
+      });
+      html += '</div></details>';
+    });
+  });
+  html += '</div>';
+  app.innerHTML = html;
+}
+
 async function renderRun(filename) {
   updateNav('');
   const app = document.getElementById('app');
   const data = await fetchReport(filename);
   if (data.error) { app.innerHTML = `<div class="card"><p>${data.error}</p></div>`; return; }
   if (data.eval_type === 'safety') { renderSafetyRunDetail(data); return; }
+  if (data.eval_type === 'agentic') { renderAgenticRunDetail(data); return; }
 
   const summaries = modelSummaries(data);
   const testCases = data.results.length > 0 ? data.results[0].test_results : [];
@@ -1382,7 +1608,7 @@ async function renderCompare() {
     run.results.forEach(mr => {
       if (!allModels.has(mr.model_id)) allModels.set(mr.model_id, { name: mr.model_name, scores: [] });
       const entry = allModels.get(mr.model_id);
-      const scores = mr.test_results.filter(t=>t.avg_score>0).map(t=>t.avg_score);
+      const scores = (mr.test_results || []).filter(t=>t.avg_score>0).map(t=>t.avg_score);
       entry.scores[ri] = scores.length ? +(scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 0;
     });
   });

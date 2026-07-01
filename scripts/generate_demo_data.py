@@ -162,15 +162,17 @@ def build_index(reports: list[tuple[str, dict]]) -> list:
                 })
         model_scores.sort(key=lambda x: x["avg"], reverse=True)
         meta = suite_meta(data.get("suite_name", ""))
+        model_ids = {r.get("model_id") for r in data.get("results", []) if r.get("model_id")}
         index.append({
             "filename": filename,
             "run_id": data.get("run_id", ""),
             "suite_name": data.get("suite_name", ""),
+            "eval_type": data.get("eval_type", "quality"),
             "modality": meta["modality"],
             "task_type": meta["task_type"],
-            "model_count": len(data.get("results", [])),
+            "model_count": len(model_ids) if model_ids else len(data.get("results", [])),
             "top_model": model_scores[0] if model_scores else None,
-            "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else [0, 0],
+            "score_range": [model_scores[-1]["avg"], model_scores[0]["avg"]] if model_scores else None,
         })
     return index
 
@@ -412,11 +414,50 @@ def _gate_rows(report: dict, classification: dict) -> list:
     return rows
 
 
+def _agentic_rows(pairs: list) -> list:
+    """Aggregate agentic reports into a per-model efficiency leaderboard.
+
+    Agentic reports have no test_results/avg_score to average — results[] is a
+    flat list of per (model, test_case, run) records with a deterministic
+    success flag plus efficiency metrics. Mirrors _gate_rows()'s role for the
+    classification-gate category: a dedicated aggregation, not a reuse of
+    build_leaderboard()'s quality-score math.
+    """
+    by_model: dict[str, dict] = {}
+    for _, data in pairs:
+        for r in data.get("results", []):
+            mid = r.get("model_id")
+            if mid is None:
+                continue
+            by_model.setdefault(mid, {"id": mid, "name": r.get("model_name", mid), "runs": []})["runs"].append(r)
+
+    rows = []
+    for entry in by_model.values():
+        runs = entry["runs"]
+        n = len(runs)
+        if not n:
+            continue
+        tokens_sum = sum((r.get("tokens") or {}).get("input", 0) + (r.get("tokens") or {}).get("output", 0) for r in runs)
+        rows.append({
+            "id": entry["id"], "name": entry["name"], "n": n,
+            "successRate": round(sum(1 for r in runs if r.get("success")) / n, 4),
+            "avgModelCalls": round(sum(r.get("model_calls", 0) for r in runs) / n, 1),
+            "avgToolCalls": round(sum(r.get("tool_calls", 0) for r in runs) / n, 1),
+            "avgTokens": round(tokens_sum / n),
+            "avgCost": round(sum(r.get("cost", 0) for r in runs) / n, 4),
+            "avgLatency": round(sum(r.get("latency", 0) for r in runs) / n, 1),
+        })
+    # Best first: highest success rate, then fewest tool calls (efficiency).
+    rows.sort(key=lambda r: (-r["successRate"], r["avgToolCalls"]))
+    return rows
+
+
 def build_categories(pairs: list, gate_data: dict | None = None) -> list:
     """Group runs into lmarena-style category tabs by (modality, task_type).
 
     Quality categories carry the standard 1-10 aggregated leaderboard; the
-    vision classification-gate category carries confusion-matrix metrics.
+    vision classification-gate category carries confusion-matrix metrics;
+    the agentic category carries success-rate/efficiency metrics.
     """
     groups: dict[tuple, list] = {}
     for filename, data in pairs:
@@ -424,11 +465,13 @@ def build_categories(pairs: list, gate_data: dict | None = None) -> list:
         groups.setdefault((meta["modality"], meta["task_type"]), []).append((filename, data))
 
     label_word = {"text": "Text", "vision": "Vision",
-                  "generation": "Generation", "classification": "Classification"}
+                  "generation": "Generation", "classification": "Classification",
+                  "tool_use": "Agentic"}
     categories = []
     for (modality, task_type), grp in groups.items():
         suites = sorted({d.get("suite_name", "") for _, d in grp})
         is_gate = gate_data is not None and gate_data["suite_name"] in suites
+        is_agentic = any(d.get("eval_type") == "agentic" for _, d in grp)
         cat = {
             "key": f"{modality}-{task_type}",
             "label": f"{label_word[modality]} · {label_word[task_type]}",
@@ -436,9 +479,12 @@ def build_categories(pairs: list, gate_data: dict | None = None) -> list:
             "suites": suites,
             "reportCount": len(grp),
             "productionLatencyCutoff": PRODUCTION_LATENCY_CUTOFF,
-            "metric_kind": "classification_gate" if is_gate else "quality",
+            "metric_kind": "agentic" if is_agentic else ("classification_gate" if is_gate else "quality"),
         }
-        if is_gate:
+        if is_agentic:
+            cat["agentic"] = _agentic_rows(grp)
+            cat["isNew"] = True
+        elif is_gate:
             cat["gate"] = _gate_rows(gate_data["report"], gate_data["classification"])
             cat["gateNote"] = (
                 "Committed set is SAFE-only, so unsafe_total=0 and the dangerous "
@@ -453,9 +499,9 @@ def build_categories(pairs: list, gate_data: dict | None = None) -> list:
             cat["testCaseCount"] = lb["testCaseCount"]
         categories.append(cat)
 
-    # Stable, readable order: text-gen, text-classification, vision-*, then rest.
+    # Stable, readable order: text-gen, text-classification, vision-*, agentic, then rest.
     order = {"text-generation": 0, "text-classification": 1,
-             "vision-classification": 2, "vision-generation": 3}
+             "vision-classification": 2, "vision-generation": 3, "text-tool_use": 4}
     categories.sort(key=lambda c: order.get(c["key"], 99))
     return categories
 
@@ -469,7 +515,8 @@ def compose_leaderboard(pairs_sorted: list, gate_data: dict | None = None) -> di
     """
     categories = build_categories(pairs_sorted, gate_data)
     gate_suite = gate_data["suite_name"] if gate_data else None
-    quality_pairs = [(f, d) for f, d in pairs_sorted if d.get("suite_name") != gate_suite]
+    quality_pairs = [(f, d) for f, d in pairs_sorted
+                      if d.get("suite_name") != gate_suite and d.get("eval_type") != "agentic"]
     legacy = (build_leaderboard(quality_pairs) if quality_pairs
               else {"aggregated": [], "calibration": [], "reportCount": 0, "testCaseCount": 0})
     return {
@@ -536,6 +583,7 @@ DEMO_ALLOWLIST = [
     "biology_over_refusal_20260610_082550.json",
     "school_classifier_20260416_195602.json",
     "swms_safety_generator_20260410_162637.json",
+    "health_safety_agentic_20260701_081224.json",
 ]
 DEMO_FALLBACK_LIMIT = 6  # used only when DEMO_ALLOWLIST is None
 
@@ -555,14 +603,18 @@ def from_real_reports(reports_dir: Path) -> bool:
 
     def _is_renderable(p: Path) -> bool:
         # Allowlisted runs may be safety-typed (e.g. over-refusal) yet still carry
-        # per-test avg_score, so they render on the quality leaderboard. Only true
-        # gate-only reports (no avg_score) and classification sidecars can't.
+        # per-test avg_score, so they render on the quality leaderboard. Agentic
+        # reports carry no avg_score at all (flat success/tool_calls records) but
+        # render via their own category — only true gate-only reports (no
+        # avg_score) and classification sidecars can't render.
         if p.name.endswith("_classification.json"):
             return False
         try:
             data = json.loads(p.read_text())
         except (json.JSONDecodeError, OSError):
             return False
+        if data.get("eval_type") == "agentic":
+            return bool(data.get("results"))
         for r in data.get("results", []):
             for tr in r.get("test_results", []):
                 if "avg_score" in tr:

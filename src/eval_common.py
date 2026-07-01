@@ -129,6 +129,63 @@ def call_model(
         }
 
 
+def call_model_with_tools(
+    client: OpenAI,
+    model_id: str,
+    messages: list[dict],
+    tools: list[dict],
+) -> dict:
+    """Call a model with tool-calling enabled, for the agentic eval pipeline.
+
+    Unlike call_model, this returns the raw assistant message (dict, suitable
+    for appending straight back into `messages`) plus whatever tool calls the
+    model wants executed. The caller owns the tool-execution loop.
+    """
+    start = time.time()
+    try:
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.3,
+            max_tokens=4096,
+        )
+        latency = time.time() - start
+        message = response.choices[0].message
+        usage = response.usage
+
+        tool_calls = []
+        for tc in (message.tool_calls or []):
+            try:
+                arguments = json.loads(tc.function.arguments)
+            except json.JSONDecodeError:
+                arguments = {}
+            tool_calls.append({"id": tc.id, "name": tc.function.name, "arguments": arguments})
+
+        return {
+            "assistant_message": message.model_dump(exclude_none=True),
+            "content": message.content,
+            "tool_calls": tool_calls,
+            "latency": round(latency, 2),
+            "tokens": {
+                "input": usage.prompt_tokens if usage else 0,
+                "output": usage.completion_tokens if usage else 0,
+            },
+            "error": None,
+        }
+    except Exception as e:
+        latency = time.time() - start
+        return {
+            "assistant_message": None,
+            "content": None,
+            "tool_calls": [],
+            "latency": round(latency, 2),
+            "tokens": {"input": 0, "output": 0},
+            "error": str(e),
+        }
+
+
 def parse_judge_response(response_text: str) -> dict | None:
     """Extract JSON scores from judge response."""
     try:

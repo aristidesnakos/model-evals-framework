@@ -3,6 +3,7 @@
     "filename": "swms_safety_generator_20260623_121911.json",
     "run_id": "20260623_121911",
     "suite_name": "swms_safety_generator",
+    "eval_type": "quality",
     "modality": "text",
     "task_type": "generation",
     "model_count": 4,
@@ -19,6 +20,7 @@
     "filename": "biology_over_refusal_20260610_082550.json",
     "run_id": "20260610_082550",
     "suite_name": "biology_over_refusal",
+    "eval_type": "safety",
     "modality": "text",
     "task_type": "generation",
     "model_count": 6,
@@ -35,6 +37,7 @@
     "filename": "school_classifier_20260416_195602.json",
     "run_id": "20260416_195602",
     "suite_name": "school_classifier",
+    "eval_type": "quality",
     "modality": "text",
     "task_type": "classification",
     "model_count": 5,
@@ -51,6 +54,7 @@
     "filename": "swms_safety_generator_20260410_162637.json",
     "run_id": "20260410_162637",
     "suite_name": "swms_safety_generator",
+    "eval_type": "quality",
     "modality": "text",
     "task_type": "generation",
     "model_count": 5,
@@ -62,5 +66,16 @@
       7.3,
       8.1
     ]
+  },
+  {
+    "filename": "health_safety_agentic_20260701_081224.json",
+    "run_id": "20260701_081224",
+    "suite_name": "health_safety_agentic",
+    "eval_type": "agentic",
+    "modality": "text",
+    "task_type": "tool_use",
+    "model_count": 5,
+    "top_model": null,
+    "score_range": null
   }
 ]

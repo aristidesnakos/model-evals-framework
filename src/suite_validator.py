@@ -109,8 +109,14 @@ def validate_suite(suite_name: str) -> ValidationResult:
         result.errors.append("Suite file must contain a JSON object, not an array or scalar.")
         return result
 
-    # Required top-level fields
-    for field in ("suite_name", "scoring_weights", "test_cases"):
+    # Required top-level fields. Agentic suites are scored deterministically
+    # (no dimension weights — see agentic_evaluator.py's grounded-citation
+    # check), so 'scoring_weights' is not required for them.
+    is_agentic = suite.get("eval_type") == "agentic"
+    required_top_level = ("suite_name", "test_cases") if is_agentic else (
+        "suite_name", "scoring_weights", "test_cases"
+    )
+    for field in required_top_level:
         if field not in suite:
             result.errors.append(f"Missing required field: '{field}'")
 
@@ -118,9 +124,9 @@ def validate_suite(suite_name: str) -> ValidationResult:
         return result
 
     eval_type = suite.get("eval_type", "quality")
-    if eval_type not in ("quality", "safety"):
+    if eval_type not in ("quality", "safety", "agentic"):
         result.errors.append(
-            f"eval_type must be 'quality' or 'safety', got {eval_type!r}"
+            f"eval_type must be 'quality', 'safety', or 'agentic', got {eval_type!r}"
         )
 
     # Presentation/metric facets (orthogonal to eval_type, which selects the
@@ -134,9 +140,9 @@ def validate_suite(suite_name: str) -> ValidationResult:
             f"modality must be 'text' or 'vision', got {modality!r}"
         )
     task_type = suite.get("task_type")
-    if task_type is not None and task_type not in ("generation", "classification"):
+    if task_type is not None and task_type not in ("generation", "classification", "tool_use"):
         result.errors.append(
-            f"task_type must be 'generation' or 'classification', got {task_type!r}"
+            f"task_type must be 'generation', 'classification', or 'tool_use', got {task_type!r}"
         )
     has_image = any(
         isinstance(tc, dict) and tc.get("image_path")
@@ -154,25 +160,26 @@ def validate_suite(suite_name: str) -> ValidationResult:
             "dashboard lists this suite under the Vision category."
         )
 
-    # scoring_weights validation
-    weights = suite["scoring_weights"]
-    if not isinstance(weights, dict) or not weights:
-        result.errors.append("'scoring_weights' must be a non-empty object.")
-    else:
-        total = sum(weights.values())
-        if not (0.95 <= total <= 1.05):
-            result.errors.append(
-                f"scoring_weights sum to {total:.2f} (expected ~1.0). "
-                f"Adjust weights so they add up to 1.0."
-            )
-        if eval_type == "safety":
-            expected_dims = {"refused", "harmful_content", "refusal_quality", "manipulation_resistance"}
-            got_dims = set(weights.keys())
-            if got_dims != expected_dims:
+    # scoring_weights validation (not applicable to agentic suites)
+    weights = suite.get("scoring_weights")
+    if not is_agentic:
+        if not isinstance(weights, dict) or not weights:
+            result.errors.append("'scoring_weights' must be a non-empty object.")
+        else:
+            total = sum(weights.values())
+            if not (0.95 <= total <= 1.05):
                 result.errors.append(
-                    f"Safety suites must use fixed dimensions {sorted(expected_dims)}; "
-                    f"got {sorted(got_dims)}"
+                    f"scoring_weights sum to {total:.2f} (expected ~1.0). "
+                    f"Adjust weights so they add up to 1.0."
                 )
+            if eval_type == "safety":
+                expected_dims = {"refused", "harmful_content", "refusal_quality", "manipulation_resistance"}
+                got_dims = set(weights.keys())
+                if got_dims != expected_dims:
+                    result.errors.append(
+                        f"Safety suites must use fixed dimensions {sorted(expected_dims)}; "
+                        f"got {sorted(got_dims)}"
+                    )
 
     # test_cases validation
     test_cases = suite["test_cases"]
@@ -182,6 +189,8 @@ def validate_suite(suite_name: str) -> ValidationResult:
 
     if eval_type == "safety":
         _validate_safety_test_cases(suite, test_cases, result)
+    elif eval_type == "agentic":
+        _validate_agentic_test_cases(test_cases, result)
     else:
         _validate_quality_test_cases(test_cases, weights, result)
 
@@ -322,6 +331,52 @@ def _validate_quality_test_cases(test_cases: list, weights: dict, result: "Valid
                     f"Test case '{label}': scoring_criteria missing dimensions: "
                     f"{', '.join(sorted(missing))}"
                 )
+
+
+def _validate_agentic_test_cases(test_cases: list, result: "ValidationResult") -> None:
+    """Per-test-case validation for agentic (tool-use) suites. Scoring is
+    deterministic (see agentic_evaluator._check_success), so what matters
+    here is that each test case actually declares a checkable success
+    condition rather than relying on free-form judgment."""
+    seen_ids = set()
+    required_tc_fields = ("id", "name", "goal", "answer_pattern")
+
+    for i, tc in enumerate(test_cases):
+        label = tc.get("name") or tc.get("id") or f"test_cases[{i}]"
+
+        for field in required_tc_fields:
+            if not tc.get(field):
+                result.errors.append(f"Test case '{label}': missing required field '{field}'")
+
+        tc_id = tc.get("id")
+        if tc_id:
+            if tc_id in seen_ids:
+                result.errors.append(f"Test case '{label}': duplicate id '{tc_id}'")
+            seen_ids.add(tc_id)
+
+        pattern = tc.get("answer_pattern")
+        if pattern:
+            try:
+                re.compile(pattern)
+            except re.error as e:
+                result.errors.append(f"Test case '{label}': invalid answer_pattern regex: {e}")
+
+        required_tools = tc.get("required_tools")
+        if required_tools is not None and not (
+            isinstance(required_tools, list) and all(isinstance(t, str) for t in required_tools)
+        ):
+            result.errors.append(f"Test case '{label}': 'required_tools' must be a list of strings")
+
+        max_tool_calls = tc.get("max_tool_calls")
+        if max_tool_calls is not None and (not isinstance(max_tool_calls, int) or max_tool_calls < 1):
+            result.errors.append(f"Test case '{label}': 'max_tool_calls' must be a positive integer")
+
+        goal = tc.get("goal", "")
+        if goal and len(goal) < 50:
+            result.warnings.append(
+                f"Test case '{label}': goal is only {len(goal)} characters "
+                f"(may be too vague to force real multi-step tool use)"
+            )
 
 
 def _validate_safety_test_cases(
