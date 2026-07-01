@@ -37,6 +37,8 @@ def start_dashboard(port: int, reports_dir: Path):
         def _serve_report_list(self):
             reports = []
             for f in sorted(reports_dir.glob("*.json"), reverse=True):
+                if f.name.endswith("_classification.json"):
+                    continue  # sidecar scoring data, not a report — see generate_demo_data.py's same exclusion
                 try:
                     data = json.loads(f.read_text())
                     model_scores = []
