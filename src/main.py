@@ -306,6 +306,7 @@ def _run_agentic_dry_run(api_key: str, models: list, suite_name: str, suite: dic
     one model (full tool-call loop, no judge — scoring is deterministic)."""
     from openai import OpenAI
     from agentic_evaluator import run_agentic_task
+    from tool_packs import DEFAULT_TOOL_PACK, get_tool_pack
 
     test_cases = suite["test_cases"]
     enabled = [m for m in models if m.get("enabled")]
@@ -325,9 +326,10 @@ def _run_agentic_dry_run(api_key: str, models: list, suite_name: str, suite: dic
     print(f"Goal:  {tc['goal'][:150]}{'...' if len(tc['goal']) > 150 else ''}")
 
     client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    tool_schemas, execute_tool_call = get_tool_pack(suite.get("tool_pack", DEFAULT_TOOL_PACK))
 
     print("\nRunning tool-call loop...", flush=True)
-    outcome = run_agentic_task(client, model["id"], tc)
+    outcome = run_agentic_task(client, model["id"], tc, tool_schemas, execute_tool_call)
 
     for entry in outcome["tool_log"]:
         print(f"\n-- Tool call: {entry['name']}({entry['arguments']})")

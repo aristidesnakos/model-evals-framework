@@ -7,6 +7,8 @@ import json
 import re
 from pathlib import Path
 
+from tool_packs import TOOL_PACKS
+
 EVALS_DIR = Path(__file__).parent.parent / "evals"
 
 _SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -128,6 +130,16 @@ def validate_suite(suite_name: str) -> ValidationResult:
         result.errors.append(
             f"eval_type must be 'quality', 'safety', or 'agentic', got {eval_type!r}"
         )
+
+    tool_pack = suite.get("tool_pack")
+    if tool_pack is not None:
+        if not is_agentic:
+            result.errors.append("'tool_pack' is only valid on agentic suites (eval_type='agentic')")
+        else:
+            if tool_pack not in TOOL_PACKS:
+                result.errors.append(
+                    f"Unknown tool_pack: {tool_pack!r}. Available: {sorted(TOOL_PACKS)}"
+                )
 
     # Presentation/metric facets (orthogonal to eval_type, which selects the
     # scoring pipeline). 'modality' and 'task_type' drive how a suite is listed

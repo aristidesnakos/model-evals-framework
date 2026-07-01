@@ -17,8 +17,8 @@ from datetime import datetime, timezone
 
 from openai import OpenAI
 
-from agentic_tools import TOOL_SCHEMAS, execute_tool_call
 from eval_common import OPENROUTER_BASE_URL, call_model_with_tools, load_suite
+from tool_packs import DEFAULT_TOOL_PACK, get_tool_pack
 
 DEFAULT_MAX_TOOL_CALLS = 8
 DEFAULT_SYSTEM_PROMPT = (
@@ -161,7 +161,13 @@ def _check_success(test_case: dict, final_answer: str | None, tool_log: list[dic
     return checker(test_case, final_answer, tool_log)
 
 
-def run_agentic_task(client: OpenAI, model_id: str, test_case: dict) -> dict:
+def run_agentic_task(
+    client: OpenAI,
+    model_id: str,
+    test_case: dict,
+    tool_schemas: list[dict],
+    execute_tool_call: callable,
+) -> dict:
     """Run one model through one tool-use task to completion or budget exhaustion."""
     max_tool_calls = test_case.get("max_tool_calls", DEFAULT_MAX_TOOL_CALLS)
     messages = [
@@ -181,7 +187,7 @@ def run_agentic_task(client: OpenAI, model_id: str, test_case: dict) -> dict:
             error = f"exceeded max_tool_calls ({max_tool_calls})"
             break
 
-        result = call_model_with_tools(client, model_id, messages, TOOL_SCHEMAS)
+        result = call_model_with_tools(client, model_id, messages, tool_schemas)
         model_calls += 1
         total_latency += result["latency"]
         total_tokens["input"] += result["tokens"]["input"]
@@ -237,6 +243,7 @@ def run_agentic_evaluation(
     suite = load_suite(suite_name)
     test_cases = suite["test_cases"]
     runs_per_test = suite.get("runs_per_test", 1)
+    tool_schemas, execute_tool_call = get_tool_pack(suite.get("tool_pack", DEFAULT_TOOL_PACK))
 
     client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
     enabled_models = [m for m in models if m.get("enabled")]
@@ -265,7 +272,7 @@ def run_agentic_evaluation(
 
         for tc in test_cases:
             for run_idx in range(runs_per_test):
-                outcome = run_agentic_task(client, model_id, tc)
+                outcome = run_agentic_task(client, model_id, tc, tool_schemas, execute_tool_call)
                 cost = round(
                     (outcome["tokens"]["input"] * input_cost + outcome["tokens"]["output"] * output_cost)
                     / 1_000_000,
